@@ -471,6 +471,35 @@ Title_getTitleNum(Title *self)
 }
 
 static PyObject*
+Title_getFrameRate(Title *self)
+{
+	ifo_handle_t *zero = self->dvd->ifos[0];
+
+	pgcit_t *vts_pgcit = self->ifo->vts_pgcit;
+
+	int vts_ttn = zero->tt_srpt->title[self->titlenum-1].vts_ttn;
+
+	int pgcidx = self->ifo->vts_ptt_srpt->title[vts_ttn - 1].ptt[0].pgcn - 1;
+
+	pgc_t *pgc = vts_pgcit->pgci_srp[ pgcidx ].pgc;
+	dvd_time_t *t = &pgc->playback_time;
+
+	int f = t->frame_u >> 6;
+	if (f == 1)
+	{
+		return PyUnicode_FromString("25.00");
+	}
+	else if (f == 3)
+	{
+		return PyUnicode_FromString("29.97");
+	}
+	else
+	{
+		return PyUnicode_FromString("?");
+	}
+}
+
+static PyObject*
 Title_getPlaybackTime(Title *self)
 {
 	ifo_handle_t *zero = self->dvd->ifos[0];
@@ -564,6 +593,7 @@ static PyMethodDef Title_methods[] = {
 };
 
 static PyGetSetDef Title_getseters[] = {
+	{"FrameRate", (getter)Title_getFrameRate, NULL, "Gets the frame rate", NULL},
 	{"PlaybackTime", (getter)Title_getPlaybackTime, NULL, "Gets the playback time in milliseconds", NULL},
 	{"PlaybackTimeFancy", (getter)Title_getPlaybackTimeFancy, NULL, "Gets the playback time in fancy HH:MM:SS.FF string format", NULL},
 	{"TitleNum", (getter)Title_getTitleNum, NULL, "Gets the number associated with this Title", NULL},
