@@ -500,6 +500,52 @@ Title_getFrameRate(Title *self)
 }
 
 static PyObject*
+Title_getAspectRatio(Title *self)
+{
+	char w = self->ifo->vtsi_mat->vts_video_attr.display_aspect_ratio;
+	switch(w)
+	{
+		case 0: return PyUnicode_FromString("4:3");
+		case 1: return PyUnicode_FromString("16:9");
+		case 3: return PyUnicode_FromString("16:9");
+		default:
+			PyErr_SetString(PyExc_ValueError, "Invalid picture size value");
+			return NULL;
+	}
+}
+
+static PyObject*
+Title_getWidth(Title *self)
+{
+	char w = self->ifo->vtsi_mat->vts_video_attr.picture_size;
+	switch(w)
+	{
+		case 0: return PyLong_FromLong(720);
+		case 1: return PyLong_FromLong(704);
+		case 2: return PyLong_FromLong(352);
+		case 3: return PyLong_FromLong(352);
+		default:
+			PyErr_SetString(PyExc_ValueError, "Invalid picture size value");
+			return NULL;
+	}
+}
+
+static PyObject*
+Title_getHeight(Title *self)
+{
+	char w = self->ifo->vtsi_mat->vts_video_attr.video_format;
+	switch(w)
+	{
+		case 0: return PyLong_FromLong(480);
+		case 1: return PyLong_FromLong(576);
+		case 3: return PyLong_FromLong(576);
+		default:
+			PyErr_SetString(PyExc_ValueError, "Invalid picture size value");
+			return NULL;
+	}
+}
+
+static PyObject*
 Title_getPlaybackTime(Title *self)
 {
 	ifo_handle_t *zero = self->dvd->ifos[0];
@@ -593,10 +639,13 @@ static PyMethodDef Title_methods[] = {
 };
 
 static PyGetSetDef Title_getseters[] = {
+	{"AspectRatio", (getter)Title_getAspectRatio, NULL, "Gets the aspect ratio", NULL},
 	{"FrameRate", (getter)Title_getFrameRate, NULL, "Gets the frame rate", NULL},
 	{"PlaybackTime", (getter)Title_getPlaybackTime, NULL, "Gets the playback time in milliseconds", NULL},
 	{"PlaybackTimeFancy", (getter)Title_getPlaybackTimeFancy, NULL, "Gets the playback time in fancy HH:MM:SS.FF string format", NULL},
 	{"TitleNum", (getter)Title_getTitleNum, NULL, "Gets the number associated with this Title", NULL},
+	{"Width", (getter)Title_getWidth, NULL, "Gets the width of the video in pixels", NULL},
+	{"Height", (getter)Title_getHeight, NULL, "Gets the height of the video in pixels", NULL},
 	{NULL}
 };
 
