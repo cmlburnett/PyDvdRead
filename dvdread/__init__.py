@@ -12,9 +12,8 @@ class DVD(_dvdread.DVD):
     name = None
 
     def __init__(self, Path):
-        _dvdread.DVD.__init__(self, Path)
+        _dvdread.DVD.__init__(self, Path, TitleClass=Title)
         self.titles = {}
-
 
     def GetTitle(self, titlenum):
         if titlenum in self.titles:
@@ -43,4 +42,28 @@ class DVD(_dvdread.DVD):
         n = self.GetName()
         n = n.replace('_', ' ')
         return " ".join( [z.capitalize() for z in n.split(' ')] )
+
+class Title(_dvdread.Title):
+    audios = None
+
+    def __init__(self, DVD, IFONum, TitleNum):
+        _dvdread.Title.__init__(self, DVD, IFONum, TitleNum, AudioClass=Audio)
+        self.audios = {}
+
+    def GetAudio(self, audionum):
+        if audionum in self.audios:
+            return self.audios[audionum]
+
+        i = _dvdread.Title.GetAudio(self, audionum)
+        self.audios[audionum] = i
+        return i
+
+    def GetAllAudios(self):
+        num = self.NumberOfAudios
+
+        return [self.GetAudio(i) for i in range(num)]
+
+class Audio(_dvdread.Audio):
+    def __init__(self, Title, AudioNum):
+        _dvdread.Audio.__init__(self, Title, AudioNum)
 
