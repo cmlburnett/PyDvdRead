@@ -515,6 +515,42 @@ Title_getPlaybackTime(Title *self)
 	return PyLong_FromLong(ms);
 }
 
+static PyObject*
+Title_getPlaybackTimeFancy(Title *self)
+{
+	ifo_handle_t *zero = self->dvd->ifos[0];
+
+	pgcit_t *vts_pgcit = self->ifo->vts_pgcit;
+
+	int vts_ttn = zero->tt_srpt->title[self->titlenum-1].vts_ttn;
+
+	int pgcidx = self->ifo->vts_ptt_srpt->title[vts_ttn - 1].ptt[0].pgcn - 1;
+
+	pgc_t *pgc = vts_pgcit->pgci_srp[ pgcidx ].pgc;
+	dvd_time_t *t = &pgc->playback_time;
+
+	// Time is in 8421 BCD of HH:MM:SS.FF
+	// with upper two bits of FF indicating frame rate (1 = 25; 3 = 29.97; 0 & 2 reserved)
+	// and lower 6 bits indicated BCD frame #
+
+	long hh,h,mm,m,ss,s,ff,f;
+
+	hh = (t->hour & 0xF0) >> 4;
+	 h = (t->hour & 0x0F);
+
+	mm = (t->minute & 0xF0) >> 4;
+	 m = (t->minute & 0x0F);
+
+	ss = (t->second & 0xF0) >> 4;
+	 s = (t->second & 0x0F);
+
+	ff = (t->frame_u & 0x30) >> 4;
+	 f = (t->frame_u & 0x0F);
+
+	// Format as string
+	return PyUnicode_FromFormat("%d%d:%d%d:%d%d.%d%d", hh,h, mm,m, ss,s, ff,f);
+}
+
 
 
 
@@ -529,6 +565,7 @@ static PyMethodDef Title_methods[] = {
 
 static PyGetSetDef Title_getseters[] = {
 	{"PlaybackTime", (getter)Title_getPlaybackTime, NULL, "Gets the playback time in milliseconds", NULL},
+	{"PlaybackTimeFancy", (getter)Title_getPlaybackTimeFancy, NULL, "Gets the playback time in fancy HH:MM:SS.FF string format", NULL},
 	{"TitleNum", (getter)Title_getTitleNum, NULL, "Gets the number associated with this Title", NULL},
 	{NULL}
 };
