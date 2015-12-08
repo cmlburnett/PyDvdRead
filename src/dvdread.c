@@ -8,6 +8,8 @@ typedef struct {
 	PyObject *path;
 	dvd_reader_t *dvd;
 
+	PyObject *TitleClass;
+
 	int numifos;
 	ifo_handle_t **ifos;
 
@@ -19,13 +21,29 @@ typedef struct {
 	int ifonum;
 	int titlenum;
 
+	PyObject *AudioClass;
+
 	DVD *dvd;
 
 	ifo_handle_t *ifo;
+
+	int numangles;
+	int numaudios;
+	int numsubtitles;
 } Title;
+
+typedef struct {
+	PyObject_HEAD
+	int audionum;
+
+	Title *title;
+
+	audio_attr_t *audio;
+} Audio;
 
 static PyTypeObject DvdType;
 static PyTypeObject TitleType;
+static PyTypeObject AudioType;
 
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------
@@ -42,6 +60,9 @@ DVD_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		Py_INCREF(Py_None);
 		self->path = Py_None;
 		self->dvd = NULL;
+
+		self->TitleClass = NULL;
+
 		self->numifos = 0;
 		self->ifos = NULL;
 		self->numifos = 0;
@@ -53,21 +74,25 @@ DVD_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 static int
 DVD_init(DVD *self, PyObject *args, PyObject *kwds)
 {
-	PyObject *path=NULL, *tmp;
-	static char *kwlist[] = {"path", NULL};
+	PyObject *path=NULL, *titleclass=NULL, *tmp;
+	static char *kwlist[] = {"Path", "TitleClass", NULL};
 
-	if (! PyArg_ParseTupleAndKeywords(args,kwds, "O", kwlist, &path))
+	if (! PyArg_ParseTupleAndKeywords(args,kwds, "OO", kwlist, &path, &titleclass))
 	{
 		return -1;
 	}
 
-	if (path)
-	{
-		tmp = self->path;
-		Py_INCREF(path);
-		self->path = path;
-		Py_XDECREF(tmp);
-	}
+	// Path
+	tmp = self->path;
+	Py_INCREF(path);
+	self->path = path;
+	Py_XDECREF(tmp);
+
+	// TitleClass
+	tmp = self->TitleClass;
+	Py_INCREF(titleclass);
+	self->TitleClass = titleclass;
+	Py_XDECREF(tmp);
 
 	return 0;
 }
@@ -76,6 +101,7 @@ static void
 DVD_dealloc(DVD *self)
 {
 	Py_XDECREF(self->path);
+	Py_XDECREF(self->TitleClass);
 
 	if (self->ifos)
 	{
@@ -334,7 +360,7 @@ DVD_GetTitle(DVD *self, PyObject *args)
 		return NULL;
 	}
 
-	PyObject *t = PyObject_CallObject((PyObject*)&TitleType, a);
+	PyObject *t = PyObject_CallObject(self->TitleClass, a);
 	Py_XDECREF(a);
 	if (t == NULL)
 	{
@@ -385,8 +411,13 @@ Title_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		self->ifonum = 0;
 		self->titlenum = 0;
 
+		self->AudioClass = NULL;
+
 		self->dvd = NULL;
 		self->ifo = NULL;
+
+		self->numangles = 0;
+		self->numaudios = 0;
 	}
 
 	return (PyObject*)self;
@@ -395,12 +426,12 @@ Title_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 static int
 Title_init(Title *self, PyObject *args, PyObject *kwds)
 {
-	PyObject *_dvd=NULL, *tmp;
+	PyObject *_dvd=NULL, *audioclass=NULL, *tmp;
 	int titlenum=0, ifonum=0;
-	static char *kwlist[] = {"DVD", "IFONum", "TitleNum", NULL};
+	static char *kwlist[] = {"DVD", "IFONum", "TitleNum", "AudioClass", NULL};
 
 	// Parse arguments
-	if (! PyArg_ParseTupleAndKeywords(args,kwds, "Oii", kwlist, &_dvd, &ifonum, &titlenum))
+	if (! PyArg_ParseTupleAndKeywords(args,kwds, "OiiO", kwlist, &_dvd, &ifonum, &titlenum, &audioclass))
 	{
 		return -1;
 	}
@@ -446,6 +477,42 @@ Title_init(Title *self, PyObject *args, PyObject *kwds)
 	tmp = (PyObject*)self->dvd;
 	Py_INCREF(dvd);
 	self->dvd = (DVD*)dvd;
+	Py_XDECREF(tmp);
+
+	ifo_handle_t *zero = self->dvd->ifos[0];
+
+
+
+	pgcit_t *vts_pgcit = self->ifo->vts_pgcit;
+	int vts_ttn = zero->tt_srpt->title[self->titlenum-1].vts_ttn;
+	int pgcidx = self->ifo->vts_ptt_srpt->title[vts_ttn - 1].ptt[0].pgcn - 1;
+	pgc_t *pgc = vts_pgcit->pgci_srp[ pgcidx ].pgc;
+
+	// Cache these values since the struct constant isn't always correct
+	self->numangles = zero->tt_srpt->title[ titlenum-1 ].nr_of_angles;
+	self->numaudios = 0;
+	self->numsubtitles = 0;
+
+	// Reported doesn't always match wath the program says
+	for (int i=0; i < self->ifo->vtsi_mat->nr_of_vts_audio_streams; i++)
+	{
+		if (pgc->audio_control[i] & 0x8000)
+		{
+			self->numaudios++;
+		}
+	}
+	for (int i=0; i < self->ifo->vtsi_mat->nr_of_vts_subp_streams; i++)
+	{
+		if (pgc->subp_control[i] & 0x80000000)
+		{
+			self->numsubtitles++;
+		}
+	}
+
+	// AudioClass
+	tmp = self->AudioClass;
+	Py_INCREF(audioclass);
+	self->AudioClass = audioclass;
 	Py_XDECREF(tmp);
 
 	return 0;
@@ -626,6 +693,65 @@ Title_getPlaybackTimeFancy(Title *self)
 	return PyUnicode_FromFormat("%d%d:%d%d:%d%d.%d%d", hh,h, mm,m, ss,s, ff,f);
 }
 
+static PyObject*
+Title_getNumberOfAngles(Title *self)
+{
+	return PyLong_FromLong( self->numangles );
+}
+
+static PyObject*
+Title_getNumberOfAudios(Title *self)
+{
+	return PyLong_FromLong( self->numaudios );
+}
+
+static PyObject*
+Title_getNumberOfSubtitles(Title *self)
+{
+	return PyLong_FromLong( self->numsubtitles );
+}
+
+
+
+
+static PyObject*
+Title_GetAudio(Title *self, PyObject *args, PyObject *kwds)
+{
+	int audionum;
+	static char *kwlist[] = {"AudioNum", NULL};
+
+	if (! PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &audionum))
+	{
+		return NULL;
+	}
+
+	// Bounds check
+	if (audionum < 1)
+	{
+		PyErr_SetString(PyExc_ValueError, "Audio track must be positive");
+		return NULL;
+	}
+	if (audionum > self->numaudios)
+	{
+		PyErr_SetString(PyExc_ValueError, "Audio track too large");
+		return NULL;
+	}
+
+	PyObject *a = Py_BuildValue("Oi", self, audionum);
+	if (a == NULL)
+	{
+		return NULL;
+	}
+
+	PyObject *t = PyObject_CallObject(self->AudioClass, a);
+	if (t == NULL)
+	{
+		return NULL;
+	}
+
+	return t;
+}
+
 
 
 
@@ -635,6 +761,7 @@ static PyMemberDef Title_members[] = {
 };
 
 static PyMethodDef Title_methods[] = {
+	{"GetAudio", (PyCFunction)Title_GetAudio, METH_VARARGS, "Gets the specified audio track of this title"},
 	{NULL}
 };
 
@@ -646,8 +773,323 @@ static PyGetSetDef Title_getseters[] = {
 	{"TitleNum", (getter)Title_getTitleNum, NULL, "Gets the number associated with this Title", NULL},
 	{"Width", (getter)Title_getWidth, NULL, "Gets the width of the video in pixels", NULL},
 	{"Height", (getter)Title_getHeight, NULL, "Gets the height of the video in pixels", NULL},
+	{"NumberOfAngles", (getter)Title_getNumberOfAngles, NULL, "Gets the number of angles in this title", NULL},
+	{"NumberOfAudios", (getter)Title_getNumberOfAudios, NULL, "Gets the number of audio tracks in this title", NULL},
+	{"NumberOfSubtitles", (getter)Title_getNumberOfSubtitles, NULL, "Gets the number of subtitle tracks in this title", NULL},
 	{NULL}
 };
+
+// --------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------
+// Administrative functions for Audio
+
+static PyObject*
+Audio_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
+{
+	Audio *self;
+
+	self = (Audio*)type->tp_alloc(type, 0);
+	if (self != NULL)
+	{
+		self->audionum = 0;
+		self->title = NULL;
+		self->audio = NULL;
+	}
+
+	return (PyObject*)self;
+}
+
+static int
+Audio_init(Audio *self, PyObject *args, PyObject *kwds)
+{
+	PyObject *_title=NULL, *tmp;
+	int audionum=0;
+	static char *kwlist[] = {"Title", "AudioNum", NULL};
+
+	// Parse arguments
+	if (! PyArg_ParseTupleAndKeywords(args,kwds, "Oi", kwlist, &_title, &audionum))
+	{
+		return -1;
+	}
+
+	// Ensure Title is correct type
+	if (! PyObject_TypeCheck(_title, &TitleType))
+	{
+		PyErr_SetString(PyExc_TypeError, "Title incorrect type");
+		return -1;
+	}
+	Title *title = (Title*)_title;
+
+	// Bounds check on audionum
+	if (audionum < 0)
+	{
+		PyErr_SetString(PyExc_ValueError, "Audio number cannot be negative");
+		return -1;
+	}
+	if (audionum > title->numaudios)
+	{
+		PyErr_SetString(PyExc_ValueError, "Audio number is too large");
+		return -1;
+	}
+	self->audionum = audionum;
+
+
+	ifo_handle_t *zero = title->dvd->ifos[0];
+	pgcit_t *vts_pgcit = title->ifo->vts_pgcit;
+	int vts_ttn = zero->tt_srpt->title[title->titlenum-1].vts_ttn;
+	int pgcidx = title->ifo->vts_ptt_srpt->title[vts_ttn - 1].ptt[0].pgcn - 1;
+	pgc_t *pgc = vts_pgcit->pgci_srp[ pgcidx ].pgc;
+
+	// Get audio_attr_t*
+	self->audio = NULL;
+	for (int i=0; i < title->ifo->vtsi_mat->nr_of_vts_audio_streams; i++)
+	{
+		if (pgc->audio_control[i] & 0x8000)
+		{
+			audionum--;
+			if (audionum == 0)
+			{
+				self->audio = &title->ifo->vtsi_mat->vts_audio_attr[i];
+				break;
+			}
+		}
+	}
+
+
+
+	// Assign Title object
+	tmp = (PyObject*)self->title;
+	Py_INCREF(title);
+	self->title = (Title*)title;
+	Py_XDECREF(tmp);
+
+	return 0;
+}
+
+static void
+Audio_dealloc(Audio *self)
+{
+	Py_XDECREF(self->title);
+	self->title = NULL;
+	self->audio = NULL;
+
+	Py_TYPE(self)->tp_free((PyObject*)self);
+}
+
+
+// --------------------------------------------------------------------------------
+// --------------------------------------------------------------------------------
+// Interface stuff for Audio
+
+static PyObject*
+Audio_getLangCode(Audio *self)
+{
+	char a = self->audio->lang_code >> 8;
+	char b = self->audio->lang_code & 0xFF;
+
+	return PyUnicode_FromFormat("%c%c", a, b);
+}
+
+#define SC(a,b) ((((uint16_t)a)<<8)+((uint16_t)b))
+static PyObject*
+Audio_getLanguage(Audio *self)
+{
+	switch(self->audio->lang_code)
+	{
+		case SC('\0','\0'): return PyUnicode_FromString("Unknown");
+		case SC(' ',' '): return PyUnicode_FromString("Not Specified");
+		case SC('a','a'): return PyUnicode_FromString("Afar");
+		case SC('a','b'): return PyUnicode_FromString("Abkhazian");
+		case SC('a','f'): return PyUnicode_FromString("Afrikaans");
+		case SC('a','m'): return PyUnicode_FromString("Amharic");
+		case SC('a','r'): return PyUnicode_FromString("Arabic");
+		case SC('a','s'): return PyUnicode_FromString("Assamese");
+		case SC('a','y'): return PyUnicode_FromString("Aymara");
+		case SC('a','z'): return PyUnicode_FromString("Azerbaijani");
+		case SC('b','a'): return PyUnicode_FromString("Bashkir");
+		case SC('b','e'): return PyUnicode_FromString("Byelorussian");
+		case SC('b','g'): return PyUnicode_FromString("Bulgarian");
+		case SC('b','h'): return PyUnicode_FromString("Bihari");
+		case SC('b','i'): return PyUnicode_FromString("Bislama");
+		case SC('b','n'): return PyUnicode_FromString("Bengali; Bangla");
+		case SC('b','o'): return PyUnicode_FromString("Tibetan");
+		case SC('b','r'): return PyUnicode_FromString("Breton");
+		case SC('c','a'): return PyUnicode_FromString("Catalan");
+		case SC('c','o'): return PyUnicode_FromString("Corsican");
+		case SC('c','s'): return PyUnicode_FromString("Czech");
+		case SC('c','y'): return PyUnicode_FromString("Welsh");
+		case SC('d','a'): return PyUnicode_FromString("Dansk");
+		case SC('d','e'): return PyUnicode_FromString("Deutsch");
+		case SC('d','z'): return PyUnicode_FromString("Bhutani");
+		case SC('e','l'): return PyUnicode_FromString("Greek");
+		case SC('e','n'): return PyUnicode_FromString("English");
+		case SC('e','o'): return PyUnicode_FromString("Esperanto");
+		case SC('e','s'): return PyUnicode_FromString("Espanol");
+		case SC('e','t'): return PyUnicode_FromString("Estonian");
+		case SC('e','u'): return PyUnicode_FromString("Basque");
+		case SC('f','a'): return PyUnicode_FromString("Persian");
+		case SC('f','i'): return PyUnicode_FromString("Suomi");
+		case SC('f','j'): return PyUnicode_FromString("Fiji");
+		case SC('f','o'): return PyUnicode_FromString("Faroese");
+		case SC('f','r'): return PyUnicode_FromString("Francais");
+		case SC('f','y'): return PyUnicode_FromString("Frisian");
+		case SC('g','a'): return PyUnicode_FromString("Gaelic");
+		case SC('g','d'): return PyUnicode_FromString("Scots Gaelic");
+		case SC('g','l'): return PyUnicode_FromString("Galician");
+		case SC('g','n'): return PyUnicode_FromString("Guarani");
+		case SC('g','u'): return PyUnicode_FromString("Gujarati");
+		case SC('h','a'): return PyUnicode_FromString("Hausa");
+		case SC('h','e'): return PyUnicode_FromString("Hebrew");
+		case SC('h','i'): return PyUnicode_FromString("Hindi");
+		case SC('h','r'): return PyUnicode_FromString("Hrvatski");
+		case SC('h','u'): return PyUnicode_FromString("Magyar");
+		case SC('h','y'): return PyUnicode_FromString("Armenian");
+		case SC('i','a'): return PyUnicode_FromString("Interlingua");
+		case SC('i','d'): return PyUnicode_FromString("Indonesian");
+		case SC('i','e'): return PyUnicode_FromString("Interlingue");
+		case SC('i','k'): return PyUnicode_FromString("Inupiak");
+		case SC('i','n'): return PyUnicode_FromString("Indonesian");
+		case SC('i','s'): return PyUnicode_FromString("Islenska");
+		case SC('i','t'): return PyUnicode_FromString("Italiano");
+		case SC('i','u'): return PyUnicode_FromString("Inuktitut");
+		case SC('i','w'): return PyUnicode_FromString("Hebrew");
+		case SC('j','a'): return PyUnicode_FromString("Japanese");
+		case SC('j','i'): return PyUnicode_FromString("Yiddish");
+		case SC('j','w'): return PyUnicode_FromString("Javanese");
+		case SC('k','a'): return PyUnicode_FromString("Georgian");
+		case SC('k','k'): return PyUnicode_FromString("Kazakh");
+		case SC('k','l'): return PyUnicode_FromString("Greenlandic");
+		case SC('k','m'): return PyUnicode_FromString("Cambodian");
+		case SC('k','n'): return PyUnicode_FromString("Kannada");
+		case SC('k','o'): return PyUnicode_FromString("Korean");
+		case SC('k','s'): return PyUnicode_FromString("Kashmiri");
+		case SC('k','u'): return PyUnicode_FromString("Kurdish");
+		case SC('k','y'): return PyUnicode_FromString("Kirghiz");
+		case SC('l','a'): return PyUnicode_FromString("Latin");
+		case SC('l','n'): return PyUnicode_FromString("Lingala");
+		case SC('l','o'): return PyUnicode_FromString("Laothian");
+		case SC('l','t'): return PyUnicode_FromString("Lithuanian");
+		case SC('l','v'): return PyUnicode_FromString("Latvian, Lettish");
+		case SC('m','g'): return PyUnicode_FromString("Malagasy");
+		case SC('m','i'): return PyUnicode_FromString("Maori");
+		case SC('m','k'): return PyUnicode_FromString("Macedonian");
+		case SC('m','l'): return PyUnicode_FromString("Malayalam");
+		case SC('m','n'): return PyUnicode_FromString("Mongolian");
+		case SC('m','o'): return PyUnicode_FromString("Moldavian");
+		case SC('m','r'): return PyUnicode_FromString("Marathi");
+		case SC('m','s'): return PyUnicode_FromString("Malay");
+		case SC('m','t'): return PyUnicode_FromString("Maltese");
+		case SC('m','y'): return PyUnicode_FromString("Burmese");
+		case SC('n','a'): return PyUnicode_FromString("Nauru");
+		case SC('n','e'): return PyUnicode_FromString("Nepali");
+		case SC('n','l'): return PyUnicode_FromString("Nederlands");
+		case SC('n','o'): return PyUnicode_FromString("Norsk");
+		case SC('o','c'): return PyUnicode_FromString("Occitan");
+		case SC('o','m'): return PyUnicode_FromString("Oromo");
+		case SC('o','r'): return PyUnicode_FromString("Oriya");
+		case SC('p','a'): return PyUnicode_FromString("Punjabi");
+		case SC('p','l'): return PyUnicode_FromString("Polish");
+		case SC('p','s'): return PyUnicode_FromString("Pashto, Pushto");
+		case SC('p','t'): return PyUnicode_FromString("Portugues");
+		case SC('q','u'): return PyUnicode_FromString("Quechua");
+		case SC('r','m'): return PyUnicode_FromString("Rhaeto-Romance");
+		case SC('r','n'): return PyUnicode_FromString("Kirundi");
+		case SC('r','o'): return PyUnicode_FromString("Romanian");
+		case SC('r','u'): return PyUnicode_FromString("Russian");
+		case SC('r','w'): return PyUnicode_FromString("Kinyarwanda");
+		case SC('s','a'): return PyUnicode_FromString("Sanskrit");
+		case SC('s','d'): return PyUnicode_FromString("Sindhi");
+		case SC('s','g'): return PyUnicode_FromString("Sangho");
+		case SC('s','h'): return PyUnicode_FromString("Serbo-Croatian");
+		case SC('s','i'): return PyUnicode_FromString("Sinhalese");
+		case SC('s','k'): return PyUnicode_FromString("Slovak");
+		case SC('s','l'): return PyUnicode_FromString("Slovenian");
+		case SC('s','m'): return PyUnicode_FromString("Samoan");
+		case SC('s','n'): return PyUnicode_FromString("Shona");
+		case SC('s','o'): return PyUnicode_FromString("Somali");
+		case SC('s','q'): return PyUnicode_FromString("Albanian");
+		case SC('s','r'): return PyUnicode_FromString("Serbian");
+		case SC('s','s'): return PyUnicode_FromString("Siswati");
+		case SC('s','t'): return PyUnicode_FromString("Sesotho");
+		case SC('s','u'): return PyUnicode_FromString("Sundanese");
+		case SC('s','v'): return PyUnicode_FromString("Svenska");
+		case SC('s','w'): return PyUnicode_FromString("Swahili");
+		case SC('t','a'): return PyUnicode_FromString("Tamil");
+		case SC('t','e'): return PyUnicode_FromString("Telugu");
+		case SC('t','g'): return PyUnicode_FromString("Tajik");
+		case SC('t','h'): return PyUnicode_FromString("Thai");
+		case SC('t','i'): return PyUnicode_FromString("Tigrinya");
+		case SC('t','k'): return PyUnicode_FromString("Turkmen");
+		case SC('t','l'): return PyUnicode_FromString("Tagalog");
+		case SC('t','n'): return PyUnicode_FromString("Setswana");
+		case SC('t','o'): return PyUnicode_FromString("Tonga");
+		case SC('t','r'): return PyUnicode_FromString("Turkish");
+		case SC('t','s'): return PyUnicode_FromString("Tsonga");
+		case SC('t','t'): return PyUnicode_FromString("Tatar");
+		case SC('t','w'): return PyUnicode_FromString("Twi");
+		case SC('u','g'): return PyUnicode_FromString("Uighur");
+		case SC('u','k'): return PyUnicode_FromString("Ukrainian");
+		case SC('u','r'): return PyUnicode_FromString("Urdu");
+		case SC('u','z'): return PyUnicode_FromString("Uzbek");
+		case SC('v','i'): return PyUnicode_FromString("Vietnamese");
+		case SC('v','o'): return PyUnicode_FromString("Volapuk");
+		case SC('w','o'): return PyUnicode_FromString("Wolof");
+		case SC('x','h'): return PyUnicode_FromString("Xhosa");
+		case SC('y','i'): return PyUnicode_FromString("Yiddish");
+		case SC('y','o'): return PyUnicode_FromString("Yoruba");
+		case SC('z','a'): return PyUnicode_FromString("Zhuang");
+		case SC('z','h'): return PyUnicode_FromString("Chinese");
+		case SC('z','u'): return PyUnicode_FromString("Zulu");
+		case SC('x','x'): return PyUnicode_FromString("Unknown");
+	}
+
+	return PyUnicode_FromString("Not Specified");
+}
+#undef SC
+
+static PyObject*
+Audio_getFormat(Audio *self)
+{
+	switch(self->audio->audio_format)
+	{
+		case 0: return PyUnicode_FromString("AC3");
+		case 2: return PyUnicode_FromString("MPEG1");
+		case 3: return PyUnicode_FromString("MPEG2");
+		case 4: return PyUnicode_FromString("LPCM");
+		case 5: return PyUnicode_FromString("SDDS");
+		case 6: return PyUnicode_FromString("DTS");
+	}
+
+	return PyUnicode_FromString("?");
+}
+
+static PyObject*
+Audio_getSamplingRate(Audio *self)
+{
+	// Apparently it's either 48kHz or 48kHz
+	return PyUnicode_FromString("48000");
+}
+
+
+
+
+
+static PyMemberDef Audio_members[] = {
+	{NULL}
+};
+
+static PyMethodDef Audio_methods[] = {
+	{NULL}
+};
+
+static PyGetSetDef Audio_getseters[] = {
+	{"Format", (getter)Audio_getFormat, NULL, "Gets the format", NULL},
+	{"LangCode", (getter)Audio_getLangCode, NULL, "Gets the language code", NULL},
+	{"Language", (getter)Audio_getLanguage, NULL, "Gets the language", NULL},
+	{"SamplingRate", (getter)Audio_getSamplingRate, NULL, "Gets the sampling rate", NULL},
+	{NULL}
+};
+
 
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------
@@ -734,6 +1176,47 @@ static PyTypeObject TitleType = {
 	Title_new,                 /* tp_new */
 };
 
+static PyTypeObject AudioType = {
+	PyVarObject_HEAD_INIT(NULL, 0)
+	"_dvdread.Audio",          /* tp_name */
+	sizeof(Audio),             /* tp_basicsize */
+	0,                         /* tp_itemsize */
+	(destructor)Audio_dealloc, /* tp_dealloc */
+	0,                         /* tp_print */
+	0,                         /* tp_getattr */
+	0,                         /* tp_setattr */
+	0,                         /* tp_reserved */
+	0,                         /* tp_repr */
+	0,                         /* tp_as_number */
+	0,                         /* tp_as_sequence */
+	0,                         /* tp_as_mapping */
+	0,                         /* tp_hash  */
+	0,                         /* tp_call */
+	0,                         /* tp_str */
+	0,                         /* tp_getattro */
+	0,                         /* tp_setattro */
+	0,                         /* tp_as_buffer */
+	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,               /* tp_flags */
+	"Represents a DVD audio track from libdvdread",             /* tp_doc */
+	0,                         /* tp_traverse */
+	0,                         /* tp_clear */
+	0,                         /* tp_richcompare */
+	0,                         /* tp_weaklistoffset */
+	0,                         /* tp_iter */
+	0,                         /* tp_iternext */
+	Audio_methods,             /* tp_methods */
+	Audio_members,             /* tp_members */
+	Audio_getseters,           /* tp_getset */
+	0,                         /* tp_base */
+	0,                         /* tp_dict */
+	0,                         /* tp_descr_get */
+	0,                         /* tp_descr_set */
+	0,                         /* tp_dictoffset */
+	(initproc)Audio_init,      /* tp_init */
+	0,                         /* tp_alloc */
+	Audio_new,                 /* tp_new */
+};
+
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 
@@ -755,6 +1238,7 @@ PyInit__dvdread(void)
 {
 	if (PyType_Ready(&DvdType) < 0) { return NULL; }
 	if (PyType_Ready(&TitleType) < 0) { return NULL; }
+	if (PyType_Ready(&AudioType) < 0) { return NULL; }
 
 	PyObject *m = PyModule_Create(&DvdReadmodule);
 	if (m == NULL)
@@ -768,6 +1252,7 @@ PyInit__dvdread(void)
 	Py_INCREF(&DvdType);
 	PyModule_AddObject(m, "DVD", (PyObject*)&DvdType);
 	PyModule_AddObject(m, "Title", (PyObject*)&TitleType);
+	PyModule_AddObject(m, "Audio", (PyObject*)&AudioType);
 	PyModule_AddStringConstant(m, "Version", v);
 
 	return m;
