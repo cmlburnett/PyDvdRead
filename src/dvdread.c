@@ -646,9 +646,13 @@ PyInit__dvdread(void)
 		return NULL;
 	}
 
+	char v[32];
+	sprintf(v, "%d.%d", MAJOR_VERSION, MINOR_VERSION);
+
 	Py_INCREF(&DvdType);
 	PyModule_AddObject(m, "DVD", (PyObject*)&DvdType);
 	PyModule_AddObject(m, "Title", (PyObject*)&TitleType);
+	PyModule_AddStringConstant(m, "Version", v);
 
 	return m;
 }

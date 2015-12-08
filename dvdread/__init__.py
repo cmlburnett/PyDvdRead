@@ -5,6 +5,8 @@ import os
 
 import _dvdread
 
+Version = _dvdread.Version
+
 class DVD(_dvdread.DVD):
     titles = None
     name = None
