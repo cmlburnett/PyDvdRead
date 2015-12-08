@@ -4,11 +4,12 @@ majv = 1
 minv = 0
 
 dvdread4 = Extension(
-	'dvdread',
+	'_dvdread',
 	define_macros = [
 		('MAJOR_VERSION', str(majv)),
 		('MINOR_VERSION', str(minv))
 	],
+        include_dirs = ['/usr/include'],
 	libraries = ['dvdread'],
 	sources = ['src/dvdread.c']
 )
@@ -20,6 +21,7 @@ setup(
 	author = 'Colin ML Burnett',
 	author_email = 'cmlburnett@gmail.com',
 	url = "",
+        packages = ['dvdread'],
 	ext_modules = [dvdread4]
 )
 
