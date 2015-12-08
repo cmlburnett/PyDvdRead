@@ -477,7 +477,7 @@ Title_getPlaybackTime(Title *self)
 
 	pgcit_t *vts_pgcit = self->ifo->vts_pgcit;
 
-	int vts_ttn = zero->tt_srpt->title[self->titlenum].vts_ttn;
+	int vts_ttn = zero->tt_srpt->title[self->titlenum-1].vts_ttn;
 
 	int pgcidx = self->ifo->vts_ptt_srpt->title[vts_ttn - 1].ptt[0].pgcn - 1;
 
