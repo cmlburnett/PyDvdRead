@@ -230,6 +230,7 @@ LangCodeToName(uint16_t langcode)
 
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------
+// PyObject types structs
 
 typedef struct {
 	PyObject_HEAD
@@ -293,6 +294,7 @@ typedef struct {
 	subp_attr_t *subpicture;
 } Subpicture;
 
+// Predefine them so they can be used below since their full definition references the functions below
 static PyTypeObject DvdType;
 static PyTypeObject TitleType;
 static PyTypeObject AudioType;

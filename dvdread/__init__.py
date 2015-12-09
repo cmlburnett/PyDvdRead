@@ -1,77 +1,54 @@
 
-__all__ = ['DVD']
+__all__ = ['DVD', 'Title', 'Chapter', 'Audio', 'Subpicture', 'tnode', 'node', 'DVDToXML']
 
-import os
-
+# Import and get C's version
 import _dvdread
-
 Version = _dvdread.Version
 
-class DVD(_dvdread.DVD):
-    titles = None
-    name = None
+# Get C object wrappers
+from .objects import DVD, Title, Chapter, Audio, Subpicture
 
-    def __init__(self, Path):
-        _dvdread.DVD.__init__(self, Path, TitleClass=Title)
-        self.titles = {}
+# Get XML implementation
+from .xml import tnode, node
 
-    def GetTitle(self, titlenum):
-        if titlenum in self.titles:
-            return self.titles[titlenum]
+def DVDToXML(device):
+	with DVD(device) as d:
+		d.Open()
 
-        i = _dvdread.DVD.GetTitle(self, titlenum)
-        self.titles[titlenum] = i
-        return i;
+		root = node('dvd', numtitles=d.NumberOfTitles, parser="pydvdread %s"%Version)
+		root.AddChild( tnode('device', d.Path) )
+		root.AddChild( tnode('name', d.GetName(), fancy=d.GetNameTitleCase()) )
+		root.AddChild( tnode('vmg_id', d.VMGID) )
+		root.AddChild( tnode('provider_id', d.ProviderID) )
 
-    def GetAllTitles(self):
-        num = self.NumberOfTitles
+		titles = root.AddChild( node('titles') )
 
-        return [self.GetTitle(i) for i in range(num)]
+		for i in range(1, d.NumberOfTitles+1):
+			t = d.GetTitle(i)
 
-    def GetName(self):
-        if self.name != None:
-            return self.name
 
-        with open(self.Path, 'rb') as f:
-            f.seek(32808, os.SEEK_SET)
-            self.name = f.read(32).decode('utf-8').strip()
+			title = titles.AddChild( node('title', idx=t.TitleNum) )
+			title.AddChild( tnode('length', t.PlaybackTime, fancy=t.PlaybackTimeFancy) )
+			title.AddChild( node('picture', aspectratio=t.AspectRatio, framerate=t.FrameRate, width=t.Width, height=t.Height) )
+			title.AddChild( node('angle', num=t.NumberOfAngles) )
 
-        return self.name
+			audios = title.AddChild( node('audios', num=t.NumberOfAudios) )
+			for j in range(1, t.NumberOfAudios+1):
+				a = t.GetAudio(j)
+				audio = audios.AddChild( node('audio', idx=j, langcode=a.LangCode, language=a.Language, format=a.Format, samplingrate=a.SamplingRate) )
 
-    def GetNameTitleCase(self):
-        n = self.GetName()
-        n = n.replace('_', ' ')
-        return " ".join( [z.capitalize() for z in n.split(' ')] )
+			chapters = title.AddChild( node('chapters', num=t.NumberOfChapters) )
+			for j in range(1, t.NumberOfChapters+1):
+				c = t.GetChapter(j)
+				chapter = chapters.AddChild( node('chapter', idx=j) )
+				chapter.AddChild( tnode('length', c.Length, fancy=c.LengthFancy) )
+				chapter.AddChild( node('cells', start=c.StartCell, end=c.EndCell) )
 
-class Title(_dvdread.Title):
-    audios = None
 
-    def __init__(self, DVD, IFONum, TitleNum):
-        _dvdread.Title.__init__(self, DVD, IFONum, TitleNum, AudioClass=Audio, ChapterClass=Chapter, SubpictureClass=Subpicture)
-        self.audios = {}
+			subpictures = title.AddChild( node('subpictures', num=t.NumberOfSubpictures) )
+			for j in range(1, t.NumberOfSubpictures+1):
+				s = t.GetSubpicture(j)
+				subpicture = subpictures.AddChild( node('subpicture', idx=j, langcode=s.LangCode, language=s.Language) )
 
-    def GetAudio(self, audionum):
-        if audionum in self.audios:
-            return self.audios[audionum]
-
-        i = _dvdread.Title.GetAudio(self, audionum)
-        self.audios[audionum] = i
-        return i
-
-    def GetAllAudios(self):
-        num = self.NumberOfAudios
-
-        return [self.GetAudio(i) for i in range(num)]
-
-class Audio(_dvdread.Audio):
-    def __init__(self, Title, AudioNum):
-        _dvdread.Audio.__init__(self, Title, AudioNum)
-
-class Chapter(_dvdread.Chapter):
-    def __init__(self, Title, ChapterNum, StartCell, EndCell, LenMS, LenFancy):
-        _dvdread.Chapter.__init__(self, Title, ChapterNum, StartCell, EndCell, LenMS, LenFancy)
-
-class Subpicture(_dvdread.Subpicture):
-    def __init__(self, Title, SubpictureNum):
-        _dvdread.Subpicture.__init__(self, Title, SubpictureNum)
+	return root.OuterXMLPretty
 
