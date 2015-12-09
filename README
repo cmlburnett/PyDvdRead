@@ -2,6 +2,8 @@ PyDvdRead -- A wrapper library around libdvdread4.
 
 This python module wraps libdvdread4 to provide Python access to DVD structural information. This does not fully wrap libdvdread4 as my needs are not that extensive.
 
+Please note that this module uses libdvdread4 to directly access a DVD disc if the device path is provided. This means that execution speed will depend on disc access, which can be slow. Just be aware of this.
+
 ---------
 :Install:
 ---------
@@ -69,4 +71,16 @@ Output:
 	Title 7 has 1 angles, 1 audio tracks, 4 chapters, 0 subpictures, and runs for 00:04:50.21
 
 You must provide the device path to the DVD constructor, and then call Open() to parse the device structure. Doing this within the `with` keyword in Python ensures that DVD.Close() is called and cleanup is performed. The above script shows how to iterate through titles.
+
+--------------
+:Organization:
+--------------
+
+This module contains two parts:
+1) C implementation to wrap libdvdread4 and provide basic PyObject types for use within Python
+2) Python implementation to wrap PyObject types created in C
+
+The C objects are defined within the /src/ directory and the Python objects in the /dvdread/ directory. The C objects are defined in the _dvdread module and the Python objects in the dvdread module.
+
+Included in the /dvdread/ directory is a crude and simple XML DOM implementation. The purpose of this XML DOM is to create the hierarchical structure to produce valid XML output. It would probably be prudent to use a "real" DOM implementation, but this works and it was fast to implement.
 

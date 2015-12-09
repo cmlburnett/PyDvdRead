@@ -1,14 +1,50 @@
+"""
+Simple and crude XML DOM implementation. It does not read XML data, only produces XML text from the node objects provided here. Attributes are supported; namespaces are not. Finally, it is possible to get a "pretty" output using the OuterXMLPretty getter property.
+
+_node is a base class with most of the functionality, with node being the "general" node type and tnode for text nodes. The intent is that these nodes have either node children or one tnode child. This keeps things simpler. Also, unlike Real DOM Implementations, the text node is a named node with text underneath it. The
+
+Example use:
+	root = node('dvd', numtitles=d.NumberOfTitles, parser="pydvdread %s"%Version)
+	root.AddChild( tnode('device', d.Path) )
+	root.AddChild( tnode('name', d.GetName(), fancy=d.GetNameTitleCase()) )
+	root.AddChild( tnode('vmg_id', d.VMGID) )
+	root.AddChild( tnode('provider_id', d.ProviderID) )
+	titles = root.AddChild( node('titles') )
+
+Attributes are passed as named keywords to node() and tnode(), and can be accessed by using [...] on node nbjects.
+node.AddChild() returns the supplied node as with @titles above.
+The OuterXMLPretty for the above produces:
+
+	<?xml version="1.0" ?>
+	<dvd numtitles="7" parser="pydvdread 1.0">
+		<device>/dev/sr0</device>
+		<name fancy="Blood Diamond">BLOOD_DIAMOND</name>
+		<vmg_id>DVDVIDEO-VMG</vmg_id>
+		<provider_id>WARNER_HOME_VIDEO</provider_id>
+		<titles/>
+	</dvd>
+
+Hopefully the rest is self-explanatory.
+"""
 
 from xml.sax.saxutils import escape as XMLescape
 from xml.sax.saxutils import unescape as XMLunescape
 from xml.dom.minidom import parseString as MDparseString
 
 class _node:
+	"""
+	Base class that handles the tag name and attributes.
+	"""
+
 	_name = None
 	_attrs = None
 	_parent = None
 
 	def __init__(self, name, **attrs):
+		"""
+		Basic node initialization with the node name (i.e., TagName) and attributes as keywords.
+		"""
+
 		self._name = name
 		self._attrs = {}
 		self._attrs.update(attrs)
@@ -89,6 +125,11 @@ class _node:
 		raise NotImplementedError()
 
 class tnode(_node):
+	"""
+	A text node.
+	Unlike Real DOM, this node is named and its only children is a single blurb of text.
+	"""
+
 	_text = None
 
 	def __init__(self, name, text, **attrs):
@@ -97,9 +138,15 @@ class tnode(_node):
 
 	@property
 	def Text(self):
+		"""
+		Gets the text under this node.
+		"""
 		return self._text
 	@Text.setter
 	def setText(self, v):
+		"""
+		Sets the text under this node.
+		"""
 		self._text = v
 
 	@property
@@ -110,6 +157,12 @@ class tnode(_node):
 		return XMLescape(str(self.Text))
 
 class node(_node):
+	"""
+	A regular node.
+	This node can have children: other node() objects or tnode() objects.
+	Typically, call AddChild(...) and use the return value to get the child node.
+	"""
+
 	_children = None
 
 	def __init__(self, name, **attrs):
