@@ -1,15 +1,12 @@
+"""
+Pythonic wrappers for the C implemented objects. The idea is that some management is far easier to do in Python plus not implementing things in C avoids potential bugs and segfaults.
+
+Note that these classes are passed back to the C objects to be created (see the various __init__ arguments that end in "Class").
+"""
+
 import _dvdread
 
 import os
-
-# --------------------------------------------------------------------------------
-# --------------------------------------------------------------------------------
-# Pythonic wrappers for the C implemented objects.
-# The idea is that some management is far easier to do in Python plus not implementing
-# things in C avoids potential bugs and segfaults.
-#
-# Note that these classes are passed back to the C objects to be created (see the
-# various __init__ arguments that end in "Class".
 
 class DVD(_dvdread.DVD):
 	"""
