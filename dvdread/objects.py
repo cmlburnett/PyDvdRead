@@ -32,7 +32,7 @@ class DVD(_dvdread.DVD):
     def GetAllTitles(self):
         num = self.NumberOfTitles
 
-        return [self.GetTitle(i) for i in range(num)]
+        return [self.GetTitle(i) for i in range(1, num+1)]
 
     def GetName(self):
         if self.name != None:
