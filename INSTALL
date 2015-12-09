@@ -1,0 +1,12 @@
+Two simple steps:
+
+	python3 setup.py build
+
+and then to install
+
+	python3 setup.py install
+
+You can install in your home directory instead
+
+	python3 setup.py install --home ~
+
