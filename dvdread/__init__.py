@@ -1,3 +1,14 @@
+"""
+PyDvdRead is a wrapper around libdvdread4.
+A set of objects are created in C manually, then wrapped in a thin Python layer of wrapper objects.
+Included is a crude, minimal XML implementation.
+
+Not everything in libdvdread4 is wrapped in this library.
+
+Implementation is heavily influenced by lsdvd utility and various bits of information found online about DVD structure (e.g., IFO, VTS).
+http://dvd.sourceforge.net/dvdinfo/index.html
+https://en.wikipedia.org/wiki/DVD-Video
+"""
 
 __all__ = ['DVD', 'Title', 'Chapter', 'Audio', 'Subpicture', 'tnode', 'node', 'DVDToXML']
 
@@ -11,7 +22,12 @@ from .objects import DVD, Title, Chapter, Audio, Subpicture
 # Get XML implementation
 from .xml import tnode, node
 
-def DVDToXML(device):
+def DVDToXML(device, pretty=True):
+	"""
+	Given a device path, this returns a 'pretty' XML string that contains all of the information that this library implements.
+	Pass pretty=False to get a non-pretty version.
+	"""
+
 	with DVD(device) as d:
 		d.Open()
 
@@ -50,5 +66,8 @@ def DVDToXML(device):
 				s = t.GetSubpicture(j)
 				subpicture = subpictures.AddChild( node('subpicture', idx=j, langcode=s.LangCode, language=s.Language) )
 
-	return root.OuterXMLPretty
+	if pretty:
+		return root.OuterXMLPretty
+	else:
+		return root.OuterXML
 
