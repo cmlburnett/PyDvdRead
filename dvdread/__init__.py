@@ -47,7 +47,7 @@ class Title(_dvdread.Title):
     audios = None
 
     def __init__(self, DVD, IFONum, TitleNum):
-        _dvdread.Title.__init__(self, DVD, IFONum, TitleNum, AudioClass=Audio)
+        _dvdread.Title.__init__(self, DVD, IFONum, TitleNum, AudioClass=Audio, ChapterClass=Chapter, SubpictureClass=Subpicture)
         self.audios = {}
 
     def GetAudio(self, audionum):
@@ -66,4 +66,12 @@ class Title(_dvdread.Title):
 class Audio(_dvdread.Audio):
     def __init__(self, Title, AudioNum):
         _dvdread.Audio.__init__(self, Title, AudioNum)
+
+class Chapter(_dvdread.Chapter):
+    def __init__(self, Title, ChapterNum, StartCell, EndCell, LenMS, LenFancy):
+        _dvdread.Chapter.__init__(self, Title, ChapterNum, StartCell, EndCell, LenMS, LenFancy)
+
+class Subpicture(_dvdread.Subpicture):
+    def __init__(self, Title, SubpictureNum):
+        _dvdread.Subpicture.__init__(self, Title, SubpictureNum)
 
