@@ -1,7 +1,12 @@
+import sys
 from distutils.core import setup, Extension
 
 majv = 1
 minv = 0
+
+if sys.version_info < (3,):
+	print("This library is only tested with Python 3.4")
+	sys.exit(1)
 
 dvdread4 = Extension(
 	'_dvdread',

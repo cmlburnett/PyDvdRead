@@ -1,7 +1,10 @@
 """
 PyDvdRead is a wrapper around libdvdread4.
+By Colin ML Burnett
+
 A set of objects are created in C manually, then wrapped in a thin Python layer of wrapper objects.
 Included is a crude, minimal XML implementation.
+(Forgive me, this is my first CPython module.)
 
 Not everything in libdvdread4 is wrapped in this library.
 
