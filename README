@@ -1,3 +1,67 @@
 PyDvdRead -- A wrapper library around libdvdread4.
 
-This python module wraps libdvdread4 to provide Python access to DVD structural information.
+This python module wraps libdvdread4 to provide Python access to DVD structural information. This does not fully wrap libdvdread4 as my needs are not that extensive.
+
+---------
+:Install:
+---------
+
+	python3 setup.py build
+	python3 setup.py install
+
+---------------
+:Documentation:
+---------------
+
+Use Python's online help to get the documentation from the classes.
+
+	$ python3
+	>>> import dvdread
+
+	>>> help(dvdread.DVD)
+	Help on class DVD in module dvdread.objects:
+
+	class DVD(_dvdread.DVD)
+	 |  Method resolution order:
+	 |      DVD
+	 |      _dvdread.DVD
+	 |      builtins.object
+	 |  
+	 |  Methods defined here:
+	 |  
+	 |  GetAllTitles(self)
+	 |  
+	 |  GetName(self)
+	 |  
+	 |  GetNameTitleCase(self)
+	.......
+
+-------
+:Usage:
+-------
+
+A simple script is needed to parse the IFO structure in a DVD:
+
+	import dvdread
+
+	with dvdread.DVD("/dev/sr0") as d:
+		d.Open()
+
+		print("Number of titles on disc: %d" % d.NumberOfTitles)
+
+		for t in d.GetAllTitles():
+			print("Title %d has %d angles, %d audio tracks, %d chapters, %d subpictures, and runs for %s" % (t.TitleNum, t.NumberOfAngles, t.NumberOfAudios, t.NumberOfChapters, t.NumberOfSubpictures, t.PlaybackTimeFancy))
+
+Output:
+	$ python3 foo.py
+	Number of titles on disc: 7
+	Title 1 has 1 angles, 4 audio tracks, 33 chapters, 3 subpictures, and runs for 02:23:11.00
+	Title 2 has 1 angles, 4 audio tracks, 1 chapters, 3 subpictures, and runs for 00:00:12.00
+	Title 3 has 1 angles, 4 audio tracks, 1 chapters, 3 subpictures, and runs for 00:00:12.00
+	Title 4 has 1 angles, 4 audio tracks, 1 chapters, 3 subpictures, and runs for 00:00:21.19
+	Title 5 has 1 angles, 1 audio tracks, 1 chapters, 3 subpictures, and runs for 00:02:04.00
+	Title 6 has 1 angles, 4 audio tracks, 1 chapters, 3 subpictures, and runs for 00:00:07.00
+	Title 7 has 1 angles, 1 audio tracks, 4 chapters, 0 subpictures, and runs for 00:04:50.21
+
+You must provide the device path to the DVD constructor, and then call Open() to parse the device structure. Doing this within the `with` keyword in Python ensures that DVD.Close() is called and cleanup is performed. The above script shows how to iterate through titles.
+
