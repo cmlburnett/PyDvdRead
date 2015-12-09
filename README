@@ -22,6 +22,13 @@ Use Python's online help to get the documentation from the classes.
 	Help on class DVD in module dvdread.objects:
 
 	class DVD(_dvdread.DVD)
+	 |  Entry class into parsing the DVD structure.
+	 |  Pass the device path to the init function, and then call Open() to initiate reading.
+	 |  Best to use the `with` keyword to ensure Python calls the Close() function when done.
+	 |  
+	 |  A DVD has titles.
+	 |  A title has chapters, audio tracks, and subpictures ("subtitles").
+	 |  
 	 |  Method resolution order:
 	 |      DVD
 	 |      _dvdread.DVD
@@ -30,11 +37,9 @@ Use Python's online help to get the documentation from the classes.
 	 |  Methods defined here:
 	 |  
 	 |  GetAllTitles(self)
-	 |  
-	 |  GetName(self)
-	 |  
-	 |  GetNameTitleCase(self)
-	.......
+	 |      Gets a tuple of all the title objects starting with title one.
+
+	..............
 
 -------
 :Usage:
