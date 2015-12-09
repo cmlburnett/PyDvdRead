@@ -5,7 +5,7 @@ Included is a crude, minimal XML implementation.
 
 Not everything in libdvdread4 is wrapped in this library.
 
-Implementation is heavily influenced by lsdvd utility and various bits of information found online about DVD structure (e.g., IFO, VTS).
+Implementation is heavily influenced by lsdvd 0.17 utility and various bits of information found online about DVD structure (e.g., IFO, VTS):
 http://dvd.sourceforge.net/dvdinfo/index.html
 https://en.wikipedia.org/wiki/DVD-Video
 """
