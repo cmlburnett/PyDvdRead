@@ -1,0 +1,3 @@
+PyDvdRead -- A wrapper library around libdvdread4.
+
+This python module wraps libdvdread4 to provide Python access to DVD structural information.
