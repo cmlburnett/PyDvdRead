@@ -1576,6 +1576,7 @@ static PyGetSetDef Subpicture_getseters[] = {
 
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------
+// Fully define PyObject types now
 
 static PyTypeObject DvdType = {
 	PyVarObject_HEAD_INIT(NULL, 0)
@@ -1762,7 +1763,7 @@ static PyTypeObject SubpictureType = {
 	0,                         /* tp_setattro */
 	0,                         /* tp_as_buffer */
 	Py_TPFLAGS_DEFAULT|Py_TPFLAGS_BASETYPE,                                /* tp_flags */
-	"Represents a DVD subpicture (aka subtitle)from libdvdread",           /* tp_doc */
+	"Represents a DVD subpicture (aka subtitle) from libdvdread",          /* tp_doc */
 	0,                         /* tp_traverse */
 	0,                         /* tp_clear */
 	0,                         /* tp_richcompare */
@@ -1784,7 +1785,7 @@ static PyTypeObject SubpictureType = {
 
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------
-
+// Define the module
 
 static PyMethodDef DVDReadModuleMethods[] = {
 	{NULL, NULL, 0, NULL}
@@ -1798,32 +1799,39 @@ static struct PyModuleDef DvdReadmodule = {
 	DVDReadModuleMethods
 };
 
+// Python expects a function named "PyInit_%s" % ModuleName, and since the module name is "_dvdread" there are two underscores
 PyMODINIT_FUNC
 PyInit__dvdread(void)
 {
+	// Ready the types
 	if (PyType_Ready(&DvdType) < 0) { return NULL; }
 	if (PyType_Ready(&TitleType) < 0) { return NULL; }
 	if (PyType_Ready(&AudioType) < 0) { return NULL; }
 	if (PyType_Ready(&ChapterType) < 0) { return NULL; }
 	if (PyType_Ready(&SubpictureType) < 0) { return NULL; }
 
+	// Create the module defined in the struct above
 	PyObject *m = PyModule_Create(&DvdReadmodule);
 	if (m == NULL)
 	{
 		return NULL;
 	}
 
+	// Not sure of a better way to do this, but form a string containing the version
 	char v[32];
 	sprintf(v, "%d.%d", MAJOR_VERSION, MINOR_VERSION);
 
+	// Add the types to the module
 	Py_INCREF(&DvdType);
 	PyModule_AddObject(m, "DVD", (PyObject*)&DvdType);
 	PyModule_AddObject(m, "Title", (PyObject*)&TitleType);
 	PyModule_AddObject(m, "Audio", (PyObject*)&AudioType);
 	PyModule_AddObject(m, "Chapter", (PyObject*)&ChapterType);
 	PyModule_AddObject(m, "Subpicture", (PyObject*)&SubpictureType);
+	// Add the version as a string to the version
 	PyModule_AddStringConstant(m, "Version", v);
 
+	// Return the module object
 	return m;
 }
 
