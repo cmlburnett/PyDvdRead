@@ -27,6 +27,9 @@ setup(
 	author_email = 'cmlburnett@gmail.com',
 	url = "",
         packages = ['dvdread'],
-	ext_modules = [dvdread4]
+	ext_modules = [dvdread4],
+	classifiers = [
+		'Programming Language :: Python :: 3.4'
+	]
 )
 
