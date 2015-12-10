@@ -25,8 +25,8 @@ setup(
 	description = 'Python wrapper for libdvdread4',
 	author = 'Colin ML Burnett',
 	author_email = 'cmlburnett@gmail.com',
-	url = "",
-        packages = ['dvdread'],
+	url = "https://github.com/cmlburnett/PyDvdRead",
+	packages = ['dvdread'],
 	ext_modules = [dvdread4],
 	classifiers = [
 		'Programming Language :: Python :: 3.4'
