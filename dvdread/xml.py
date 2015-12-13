@@ -28,8 +28,26 @@ Hopefully the rest is self-explanatory.
 """
 
 from xml.sax.saxutils import escape as XMLescape
+from xml.sax.saxutils import attrquote as XMLquote
 from xml.sax.saxutils import unescape as XMLunescape
 from xml.dom.minidom import parseString as MDparseString
+from xml.parsers.expat import ExpatError
+
+def attresc(v):
+	"""
+	Neither xml.sax.saxutils.escape nor xml.sax.saxutils.attrquote check the validity of each character. Lame.
+	"""
+	v = XMLquote(v)
+
+	ret = []
+	for c in v:
+		if ord(c) in (0x9, 0xa, 0xd) or (ord(c) >= 0x20 and ord(c) <= 0xDFF) or (ord(c) >=0xE000 and ord(c) <=0xFFFD) or (ord(c) >=0x10000 and ord(c) <= 0x10FFFF):
+			ret.append(c)
+		else:
+			# invalid character
+			ret.append( hex(ord(c)) )
+
+	return "".join(ret)
 
 class _node:
 	"""
@@ -92,7 +110,11 @@ class _node:
 		Similar to xmllint -format.
 		"""
 
-		return MDparseString(self.OuterXML).toprettyxml()
+		try:
+			return MDparseString(self.OuterXML).toprettyxml()
+		except ExpatError:
+			print("Should not have made a non well-formed document that Expat would fail to parse. This is a bug.")
+			raise
 
 	@property
 	def OuterXML(self):
@@ -106,7 +128,10 @@ class _node:
 
 		attrs = list(self._attrs.items())
 		attrs.sort()
-		attrstr = " ".join(['%s="%s"' % z for z in attrs])
+		a = []
+		for k,v in attrs:
+			a.append( (k, attresc(str(v))) )
+		attrstr = " ".join(['%s="%s"' % z for z in a])
 
 		if len(attrstr):
 			if len(ret):	return "<%s %s>%s</%s>" % (self.Name, attrstr, ret, self.Name)
