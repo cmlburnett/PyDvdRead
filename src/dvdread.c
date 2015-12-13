@@ -381,33 +381,6 @@ DVD_dealloc(DVD *self)
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
-static PyObject*
-DVD___enter__(DVD *self)
-{
-	// Nothing to set up
-	return (PyObject*)self;
-}
-
-static PyObject*
-DVD___exit__(DVD *self, PyObject *args)
-{
-	PyObject *type=NULL, *value=NULL, *traceback=NULL;
-
-	if (PyArg_ParseTuple(args, "OOO", &type, &value, &traceback))
-	{
-		// Nothing to do
-	}
-
-	if (self->dvd)
-	{
-		DVDClose(self->dvd);
-		self->dvd = NULL;
-	}
-
-	Py_INCREF(Py_False);
-	return Py_False;
-}
-
 // --------------------------------------------------------------------------------
 // --------------------------------------------------------------------------------
 // Interface stuff for DVD
@@ -638,8 +611,6 @@ static PyMethodDef DVD_methods[] = {
 	{"Open", (PyCFunction)DVD_Open, METH_NOARGS, "Opens the device for reading"},
 	{"Close", (PyCFunction)DVD_Close, METH_NOARGS, "Closes the device"},
 	{"GetTitle", (PyCFunction)DVD_GetTitle, METH_VARARGS, "Gets Title object for specified non-negative title number"},
-	{"__enter__", (PyCFunction)DVD___enter__, METH_NOARGS, "Enters a context using the with keyword"},
-	{"__exit__", (PyCFunction)DVD___exit__, METH_VARARGS, "Exits a context created with the with keyword"},
 	{NULL}
 };
 

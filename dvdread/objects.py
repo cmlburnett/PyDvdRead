@@ -33,6 +33,18 @@ class DVD(_dvdread.DVD):
 		_dvdread.DVD.__init__(self, Path, TitleClass=TitleClass)
 		self.titles = {}
 
+	def __enter__(self):
+		return self
+
+	def __exit__(self, type, value, tb):
+		# Close, always
+		try:
+			self.Close()
+		except Exception:
+			pass
+
+		return type != None
+
 	def GetTitle(self, titlenum):
 		"""
 		Get the object for the given title. Title objects are cached.
