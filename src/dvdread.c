@@ -317,11 +317,12 @@ DVD_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		self->path = Py_None;
 		self->dvd = NULL;
 
-		self->TitleClass = NULL;
+		Py_INCREF(Py_None);
+		self->TitleClass = Py_None;
 
 		self->numifos = 0;
 		self->ifos = NULL;
-		self->numifos = 0;
+		self->numtitles = 0;
 	}
 
 	return (PyObject *)self;
@@ -356,8 +357,17 @@ DVD_init(DVD *self, PyObject *args, PyObject *kwds)
 static void
 DVD_dealloc(DVD *self)
 {
-	Py_XDECREF(self->path);
-	Py_XDECREF(self->TitleClass);
+	if (self->path)
+	{
+		Py_XDECREF(self->path);
+		self->path = NULL;
+	}
+
+	if (self->TitleClass)
+	{
+		Py_XDECREF(self->TitleClass);
+		self->TitleClass = NULL;
+	}
 
 	if (self->ifos)
 	{
@@ -376,6 +386,7 @@ DVD_dealloc(DVD *self)
 	if (self->dvd)
 	{
 		DVDClose(self->dvd);
+		self->dvd = NULL;
 	}
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
@@ -397,6 +408,12 @@ DVD_getPath(DVD *self)
 	return self->path;
 }
 
+static int
+_DVD_getIsOpen(DVD *self)
+{
+	return !!self->dvd;
+}
+
 static PyObject*
 DVD_getIsOpen(DVD *self)
 {
@@ -415,6 +432,12 @@ DVD_getIsOpen(DVD *self)
 static PyObject*
 DVD_GetVMGID(DVD *self)
 {
+	if (!_DVD_getIsOpen(self))
+	{
+		PyErr_SetString(PyExc_AttributeError, "VMGID: disc not open");
+		return NULL;
+	}
+
 	char buf[13];
 	strncpy(buf, self->ifos[0]->vmgi_mat->vmg_identifier, 12);
 	buf[12] = '\0';
@@ -425,6 +448,12 @@ DVD_GetVMGID(DVD *self)
 static PyObject*
 DVD_GetProviderID(DVD *self)
 {
+	if (!_DVD_getIsOpen(self))
+	{
+		PyErr_SetString(PyExc_AttributeError, "ProviderID: disc not open");
+		return NULL;
+	}
+
 	char buf[33];
 	strncpy(buf, self->ifos[0]->vmgi_mat->provider_identifier, 32);
 	buf[32] = '\0';
@@ -435,6 +464,12 @@ DVD_GetProviderID(DVD *self)
 static PyObject*
 DVD_GetNumberOfTitles(DVD *self)
 {
+	if (!_DVD_getIsOpen(self))
+	{
+		PyErr_SetString(PyExc_AttributeError, "NumberOfTitles: disc not open");
+		return NULL;
+	}
+
 	return PyLong_FromLong((long)self->numtitles);
 }
 
@@ -444,9 +479,16 @@ static PyObject*
 DVD_Open(DVD *self)
 {
 	// Ensure not already open
-	if (self->dvd)
+	if (_DVD_getIsOpen(self))
 	{
 		PyErr_SetString(PyExc_Exception, "Device is already open, first Close() it to re-open");
+		return NULL;
+	}
+
+	// Ensure path is present
+	if (self->path == NULL)
+	{
+		PyErr_SetString(PyExc_AttributeError, "_path");
 		return NULL;
 	}
 
@@ -459,14 +501,20 @@ DVD_Open(DVD *self)
 		return NULL;
 	}
 
+	struct stat s;
+	if (stat(path, &s))
+	{
+		PyErr_SetString(PyExc_ValueError, "Device/file not found");
+		return NULL;
+	}
+
 	// Open the DVD
-	dvd_reader_t *dvd = DVDOpen(path);
-	if (dvd == NULL)
+	self->dvd = DVDOpen(path);
+	if (self->dvd == NULL)
 	{
 		PyErr_SetString(PyExc_Exception, "Could not open device");
 		return NULL;
 	}
-	self->dvd = dvd;
 
 	// Get the root IFO
 	ifo_handle_t *zero = ifoOpen(self->dvd, 0);
@@ -500,8 +548,17 @@ DVD_Open(DVD *self)
 	return Py_None;
 
 error:
+
+	// If zero was set but not the ifos array, otherwise next block will take care of zero by closing self->ifso[0]
+	if (zero && self->ifos == NULL)
+	{
+		ifoClose(zero);
+	}
+	zero = NULL;
+
 	if (self->ifos)
 	{
+		// Close and null each open IFO
 		for (int i=0; i < self->numifos; i++)
 		{
 			if (self->ifos[i])
@@ -510,9 +567,12 @@ error:
 				self->ifos[i] = NULL;
 			}
 		}
+		// Free the array
 		free(self->ifos);
 	}
+	self->ifos = NULL;
 
+	// Close the dvd
 	if (self->dvd)
 	{
 		DVDClose(self->dvd);
@@ -526,7 +586,7 @@ static PyObject*
 DVD_Close(DVD *self)
 {
 	// Ensure not closed already, or never was open
-	if (self->dvd == NULL)
+	if (!_DVD_getIsOpen(self))
 	{
 		PyErr_SetString(PyExc_Exception, "Device not open, cannot close it");
 		return NULL;
@@ -543,15 +603,15 @@ DVD_Close(DVD *self)
 			self->ifos[i] = NULL;
 		}
 		free(self->ifos);
-		self->ifos = NULL;
 	}
+	self->ifos = NULL;
 
 	// Close and null the pointer
 	if (self->dvd)
 	{
 		DVDClose(self->dvd);
-		self->dvd = NULL;
 	}
+	self->dvd = NULL;
 
 	// return None for success
 	Py_INCREF(Py_None);
@@ -561,6 +621,13 @@ DVD_Close(DVD *self)
 static PyObject*
 DVD_GetTitle(DVD *self, PyObject *args)
 {
+	// Ensure DVD is open before getting titles
+	if (!_DVD_getIsOpen(self))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot get titles");
+		return NULL;
+	}
+
 	int title=0;
 
 	if (! PyArg_ParseTuple(args, "i", &title))
@@ -764,6 +831,14 @@ Title_dealloc(Title *self)
 	Py_XDECREF(self->dvd);
 	self->ifo = NULL;
 
+	Py_XDECREF(self->AudioClass);
+	Py_XDECREF(self->ChapterClass);
+	Py_XDECREF(self->SubpictureClass);
+
+	self->AudioClass = NULL;
+	self->ChapterClass = NULL;
+	self->SubpictureClass = NULL;
+
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
 
@@ -774,12 +849,28 @@ Title_dealloc(Title *self)
 static PyObject*
 Title_getTitleNum(Title *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	return PyLong_FromLong((long)self->titlenum);
 }
 
 static PyObject*
 Title_getFrameRate(Title *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	ifo_handle_t *zero = self->dvd->ifos[0];
 
 	pgcit_t *vts_pgcit = self->ifo->vts_pgcit;
@@ -809,6 +900,14 @@ Title_getFrameRate(Title *self)
 static PyObject*
 Title_getAspectRatio(Title *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	char w = self->ifo->vtsi_mat->vts_video_attr.display_aspect_ratio;
 	switch(w)
 	{
@@ -824,6 +923,14 @@ Title_getAspectRatio(Title *self)
 static PyObject*
 Title_getWidth(Title *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	char w = self->ifo->vtsi_mat->vts_video_attr.picture_size;
 	switch(w)
 	{
@@ -840,8 +947,16 @@ Title_getWidth(Title *self)
 static PyObject*
 Title_getHeight(Title *self)
 {
-	char w = self->ifo->vtsi_mat->vts_video_attr.video_format;
-	switch(w)
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
+	char h = self->ifo->vtsi_mat->vts_video_attr.video_format;
+	switch(h)
 	{
 		case 0: return PyLong_FromLong(480);
 		case 1: return PyLong_FromLong(576);
@@ -855,6 +970,14 @@ Title_getHeight(Title *self)
 static PyObject*
 Title_getPlaybackTime(Title *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	ifo_handle_t *zero = self->dvd->ifos[0];
 
 	pgcit_t *vts_pgcit = self->ifo->vts_pgcit;
@@ -871,6 +994,14 @@ Title_getPlaybackTime(Title *self)
 static PyObject*
 Title_getPlaybackTimeFancy(Title *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	ifo_handle_t *zero = self->dvd->ifos[0];
 
 	pgcit_t *vts_pgcit = self->ifo->vts_pgcit;
@@ -887,24 +1018,56 @@ Title_getPlaybackTimeFancy(Title *self)
 static PyObject*
 Title_getNumberOfAngles(Title *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	return PyLong_FromLong( self->numangles );
 }
 
 static PyObject*
 Title_getNumberOfAudios(Title *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	return PyLong_FromLong( self->numaudios );
 }
 
 static PyObject*
 Title_getNumberOfSubpictures(Title *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	return PyLong_FromLong( self->numsubpictures );
 }
 
 static PyObject*
 Title_getNumberOfChapters(Title *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	return PyLong_FromLong( self->numchapters );
 }
 
@@ -914,6 +1077,14 @@ Title_getNumberOfChapters(Title *self)
 static PyObject*
 Title_GetAudio(Title *self, PyObject *args, PyObject *kwds)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	int audionum;
 	static char *kwlist[] = {"AudioNum", NULL};
 
@@ -952,6 +1123,14 @@ Title_GetAudio(Title *self, PyObject *args, PyObject *kwds)
 static PyObject*
 Title_GetChapter(Title *self, PyObject *args, PyObject *kwds)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	int chapternum;
 	static char *kwlist[] = {"ChapterNum", NULL};
 
@@ -1021,6 +1200,14 @@ Title_GetChapter(Title *self, PyObject *args, PyObject *kwds)
 static PyObject*
 Title_GetSubpicture(Title *self, PyObject *args, PyObject *kwds)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	int subpicturenum;
 	static char *kwlist[] = {"SubpictureNum", NULL};
 
@@ -1126,6 +1313,15 @@ Audio_init(Audio *self, PyObject *args, PyObject *kwds)
 	}
 	Title *title = (Title*)_title;
 
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(title->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return -1;
+	}
+
+
+
 	// Bounds check on audionum
 	if (audionum < 0)
 	{
@@ -1190,6 +1386,14 @@ Audio_dealloc(Audio *self)
 static PyObject*
 Audio_getLangCode(Audio *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->title->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	char a = self->audio->lang_code >> 8;
 	char b = self->audio->lang_code & 0xFF;
 
@@ -1199,12 +1403,28 @@ Audio_getLangCode(Audio *self)
 static PyObject*
 Audio_getLanguage(Audio *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->title->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	return LangCodeToName(self->audio->lang_code);
 }
 
 static PyObject*
 Audio_getFormat(Audio *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->title->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	switch(self->audio->audio_format)
 	{
 		case 0: return PyUnicode_FromString("AC3");
@@ -1221,6 +1441,14 @@ Audio_getFormat(Audio *self)
 static PyObject*
 Audio_getSamplingRate(Audio *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->title->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	// Apparently it's either 48kHz or 48kHz
 	return PyUnicode_FromString("48000");
 }
@@ -1293,6 +1521,15 @@ Chapter_init(Chapter *self, PyObject *args, PyObject *kwds)
 	}
 	Title *title = (Title*)_title;
 
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(title->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return -1;
+	}
+
+
+
 	// Bounds check on chapternum
 	if (chapternum < 0)
 	{
@@ -1324,8 +1561,12 @@ Chapter_init(Chapter *self, PyObject *args, PyObject *kwds)
 
 	self->lenms = lenms;
 
+
+	// Assign fancy length
+	tmp = (PyObject*)self->lenfancy;
 	Py_INCREF(lenfancy);
 	self->lenfancy = lenfancy;
+	Py_XDECREF(tmp);
 
 
 	// Assign Title object
@@ -1357,30 +1598,70 @@ Chapter_dealloc(Chapter *self)
 static PyObject*
 Chapter_getChapterNum(Chapter *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->title->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	return PyLong_FromLong(self->chapternum);
 }
 
 static PyObject*
 Chapter_getStartCell(Chapter *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->title->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	return PyLong_FromLong(self->startcell);
 }
 
 static PyObject*
 Chapter_getEndCell(Chapter *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->title->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	return PyLong_FromLong(self->endcell);
 }
 
 static PyObject*
 Chapter_getLength(Chapter *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->title->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	return PyLong_FromLong(self->lenms);
 }
 
 static PyObject*
 Chapter_getLengthFancy(Chapter *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->title->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	Py_INCREF(self->lenfancy);
 	return self->lenfancy;
 }
@@ -1447,6 +1728,15 @@ Subpicture_init(Subpicture *self, PyObject *args, PyObject *kwds)
 		return -1;
 	}
 	Title *title = (Title*)_title;
+
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(title->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return -1;
+	}
+
+
 
 	// Bounds check on subpicturenum
 	if (subpicturenum < 0)
@@ -1516,6 +1806,14 @@ Subpicture_dealloc(Subpicture *self)
 static PyObject*
 Subpicture_getLangCode(Subpicture *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->title->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	char a = self->subpicture->lang_code >> 8;
 	char b = self->subpicture->lang_code & 0xFF;
 
@@ -1525,6 +1823,14 @@ Subpicture_getLangCode(Subpicture *self)
 static PyObject*
 Subpicture_getLanguage(Subpicture *self)
 {
+	// Ensure device is open to access it
+	if (!_DVD_getIsOpen(self->title->dvd))
+	{
+		PyErr_SetString(PyExc_Exception, "Device not open, cannot read from it");
+		return NULL;
+	}
+
+
 	return LangCodeToName(self->subpicture->lang_code);
 }
 

@@ -43,7 +43,8 @@ class DVD(_dvdread.DVD):
 		except Exception:
 			pass
 
-		return type != None
+		# Don't suppress any exceptions
+		return False
 
 	def GetTitle(self, titlenum):
 		"""
