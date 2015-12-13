@@ -28,7 +28,6 @@ Hopefully the rest is self-explanatory.
 """
 
 from xml.sax.saxutils import escape as XMLescape
-from xml.sax.saxutils import attrquote as XMLquote
 from xml.sax.saxutils import unescape as XMLunescape
 from xml.dom.minidom import parseString as MDparseString
 from xml.parsers.expat import ExpatError
@@ -37,7 +36,7 @@ def attresc(v):
 	"""
 	Neither xml.sax.saxutils.escape nor xml.sax.saxutils.attrquote check the validity of each character. Lame.
 	"""
-	v = XMLquote(v)
+	v = XMLescape(v)
 
 	ret = []
 	for c in v:
