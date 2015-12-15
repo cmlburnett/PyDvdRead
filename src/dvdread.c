@@ -357,17 +357,8 @@ DVD_init(DVD *self, PyObject *args, PyObject *kwds)
 static void
 DVD_dealloc(DVD *self)
 {
-	if (self->path)
-	{
-		Py_XDECREF(self->path);
-		self->path = NULL;
-	}
-
-	if (self->TitleClass)
-	{
-		Py_XDECREF(self->TitleClass);
-		self->TitleClass = NULL;
-	}
+	Py_CLEAR(self->path);
+	Py_CLEAR(self->TitleClass);
 
 	if (self->ifos)
 	{
@@ -382,12 +373,14 @@ DVD_dealloc(DVD *self)
 		free(self->ifos);
 	}
 
-
 	if (self->dvd)
 	{
 		DVDClose(self->dvd);
-		self->dvd = NULL;
 	}
+	self->dvd = NULL;
+
+	self->numifos = 0;
+	self->numtitles = 0;
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -706,12 +699,16 @@ Title_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		self->titlenum = 0;
 
 		self->AudioClass = NULL;
+		self->ChapterClass = NULL;
+		self->SubpictureClass = NULL;
 
 		self->dvd = NULL;
 		self->ifo = NULL;
 
 		self->numangles = 0;
 		self->numaudios = 0;
+		self->numsubpictures = 0;
+		self->numchapters = 0;
 	}
 
 	return (PyObject*)self;
@@ -828,16 +825,20 @@ Title_init(Title *self, PyObject *args, PyObject *kwds)
 static void
 Title_dealloc(Title *self)
 {
-	Py_XDECREF(self->dvd);
+	self->ifonum = 0;
+	self->titlenum = 0;
+
+	Py_CLEAR(self->dvd);
+	Py_CLEAR(self->AudioClass);
+	Py_CLEAR(self->ChapterClass);
+	Py_CLEAR(self->SubpictureClass);
+
 	self->ifo = NULL;
 
-	Py_XDECREF(self->AudioClass);
-	Py_XDECREF(self->ChapterClass);
-	Py_XDECREF(self->SubpictureClass);
-
-	self->AudioClass = NULL;
-	self->ChapterClass = NULL;
-	self->SubpictureClass = NULL;
+	self->numangles = 0;
+	self->numaudios = 0;
+	self->numsubpictures = 0;
+	self->numchapters = 0;
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -1285,8 +1286,9 @@ Audio_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	if (self != NULL)
 	{
 		self->audionum = 0;
-		self->title = NULL;
 		self->audio = NULL;
+
+		self->title = NULL;
 	}
 
 	return (PyObject*)self;
@@ -1371,8 +1373,9 @@ Audio_init(Audio *self, PyObject *args, PyObject *kwds)
 static void
 Audio_dealloc(Audio *self)
 {
-	Py_XDECREF(self->title);
-	self->title = NULL;
+	self->audionum = 0;
+
+	Py_CLEAR(self->title);
 	self->audio = NULL;
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
@@ -1486,13 +1489,16 @@ Chapter_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	if (self != NULL)
 	{
 		self->chapternum = 0;
+
 		self->title = NULL;
 
 		self->startcell = 0;
 		self->endcell = 0;
 
 		self->lenms = 0;
-		self->lenfancy = NULL;
+
+		Py_INCREF(Py_None);
+		self->lenfancy = Py_None;
 	}
 
 	return (PyObject*)self;
@@ -1581,11 +1587,13 @@ Chapter_init(Chapter *self, PyObject *args, PyObject *kwds)
 static void
 Chapter_dealloc(Chapter *self)
 {
-	Py_XDECREF(self->title);
-	self->title = NULL;
+	self->chapternum = 0;
+	self->startcell = 0;
+	self->endcell = 0;
+	self->lenms = 0;
 
-	Py_XDECREF(self->lenfancy);
-	self->lenfancy = NULL;
+	Py_CLEAR(self->title);
+	Py_CLEAR(self->lenfancy);
 
 	Py_TYPE(self)->tp_free((PyObject*)self);
 }
@@ -1700,6 +1708,7 @@ Subpicture_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 	if (self != NULL)
 	{
 		self->subpicturenum = 0;
+
 		self->title = NULL;
 
 		self->subpicture = NULL;
@@ -1790,8 +1799,9 @@ Subpicture_init(Subpicture *self, PyObject *args, PyObject *kwds)
 static void
 Subpicture_dealloc(Subpicture *self)
 {
-	Py_XDECREF(self->title);
-	self->title = NULL;
+	self->subpicturenum = 0;
+
+	Py_CLEAR(self->title);
 
 	self->subpicture = NULL;
 
