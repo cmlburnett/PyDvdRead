@@ -760,7 +760,7 @@ Title_init(Title *self, PyObject *args, PyObject *kwds)
 	// Assign DVD object
 	tmp = (PyObject*)self->dvd;
 	Py_INCREF(dvd);
-	self->dvd = (DVD*)dvd;
+	self->dvd = dvd;
 	Py_XDECREF(tmp);
 
 	ifo_handle_t *zero = self->dvd->ifos[0];
@@ -1339,7 +1339,7 @@ Audio_init(Audio *self, PyObject *args, PyObject *kwds)
 	// Assign Title object
 	tmp = (PyObject*)self->title;
 	Py_INCREF(title);
-	self->title = (Title*)title;
+	self->title = title;
 	Py_XDECREF(tmp);
 
 	return 0;
@@ -1553,7 +1553,7 @@ Chapter_init(Chapter *self, PyObject *args, PyObject *kwds)
 	// Assign Title object
 	tmp = (PyObject*)self->title;
 	Py_INCREF(title);
-	self->title = (Title*)title;
+	self->title = title;
 	Py_XDECREF(tmp);
 
 	return 0;
@@ -1765,7 +1765,7 @@ Subpicture_init(Subpicture *self, PyObject *args, PyObject *kwds)
 	// Assign Title object
 	tmp = (PyObject*)self->title;
 	Py_INCREF(title);
-	self->title = (Title*)title;
+	self->title = title;
 	Py_XDECREF(tmp);
 
 	return 0;
