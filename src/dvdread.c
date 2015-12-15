@@ -410,7 +410,7 @@ _DVD_getIsOpen(DVD *self)
 static PyObject*
 DVD_getIsOpen(DVD *self)
 {
-	if (self->dvd)
+	if ( _DVD_getIsOpen(self) )
 	{
 		Py_INCREF(Py_True);
 		return Py_True;
