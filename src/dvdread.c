@@ -841,6 +841,12 @@ Title_dealloc(Title *self)
 // Interface stuff for Title
 
 static PyObject*
+Title_getDVD(Title *self)
+{
+	return (PyObject*)self->dvd;
+}
+
+static PyObject*
 Title_getTitleNum(Title *self)
 {
 	// Ensure device is open to access it
@@ -1234,6 +1240,7 @@ static PyMethodDef Title_methods[] = {
 };
 
 static PyGetSetDef Title_getseters[] = {
+	{"DVD", (getter)Title_getDVD, NULL, "Gets the DVD this title is associated with", NULL},
 	{"AspectRatio", (getter)Title_getAspectRatio, NULL, "Gets the aspect ratio", NULL},
 	{"FrameRate", (getter)Title_getFrameRate, NULL, "Gets the frame rate", NULL},
 	{"PlaybackTime", (getter)Title_getPlaybackTime, NULL, "Gets the playback time in milliseconds", NULL},
@@ -1362,6 +1369,12 @@ Audio_dealloc(Audio *self)
 // Interface stuff for Audio
 
 static PyObject*
+Audio_getTitle(Audio *self)
+{
+	return (PyObject*)self->title;
+}
+
+static PyObject*
 Audio_getLangCode(Audio *self)
 {
 	// Ensure device is open to access it
@@ -1444,6 +1457,7 @@ static PyMethodDef Audio_methods[] = {
 };
 
 static PyGetSetDef Audio_getseters[] = {
+	{"Title", (getter)Audio_getTitle, NULL, "Gets the title this track is associated with", NULL},
 	{"Format", (getter)Audio_getFormat, NULL, "Gets the format", NULL},
 	{"LangCode", (getter)Audio_getLangCode, NULL, "Gets the language code", NULL},
 	{"Language", (getter)Audio_getLanguage, NULL, "Gets the language", NULL},
@@ -1579,6 +1593,12 @@ Chapter_dealloc(Chapter *self)
 // Interface stuff for Chapter
 
 static PyObject*
+Chapter_getTitle(Audio *self)
+{
+	return (PyObject*)self->title;
+}
+
+static PyObject*
 Chapter_getChapterNum(Chapter *self)
 {
 	// Ensure device is open to access it
@@ -1662,6 +1682,7 @@ static PyMethodDef Chapter_methods[] = {
 };
 
 static PyGetSetDef Chapter_getseters[] = {
+	{"Title", (getter)Chapter_getTitle, NULL, "Gets the title this chapter is associated with", NULL},
 	{"ChapterNum", (getter)Chapter_getChapterNum, NULL, "Gets the chapter number", NULL},
 	{"StartCell", (getter)Chapter_getStartCell, NULL, "Gets the starting cell for this chapter", NULL},
 	{"EndCell", (getter)Chapter_getEndCell, NULL, "Gets the ending cell for this chapter", NULL},
@@ -1789,6 +1810,12 @@ Subpicture_dealloc(Subpicture *self)
 // Interface stuff for Subpicture
 
 static PyObject*
+Subpicture_getTitle(Audio *self)
+{
+	return (PyObject*)self->title;
+}
+
+static PyObject*
 Subpicture_getLangCode(Subpicture *self)
 {
 	// Ensure device is open to access it
@@ -1831,6 +1858,7 @@ static PyMethodDef Subpicture_methods[] = {
 };
 
 static PyGetSetDef Subpicture_getseters[] = {
+	{"Title", (getter)Subpicture_getTitle, NULL, "Gets the title this subpicture is associated with", NULL},
 	{"LangCode", (getter)Subpicture_getLangCode, NULL, "Gets the language code", NULL},
 	{"Language", (getter)Subpicture_getLanguage, NULL, "Gets the language", NULL},
 	{NULL}

@@ -52,6 +52,9 @@ class DVD(_dvdread.DVD):
 		@titlenum: the title number to query starting with one.
 		"""
 
+		if not self.IsOpen:
+			raise AttributeError("GetTitle: disc is not open")
+
 		if titlenum in self.titles:
 			return self.titles[titlenum]
 
@@ -64,6 +67,9 @@ class DVD(_dvdread.DVD):
 		Gets a tuple of all the title objects starting with title one.
 		"""
 
+		if not self.IsOpen:
+			raise AttributeError("GetAllTitles: disc is not open")
+
 		num = self.NumberOfTitles
 
 		return tuple([self.GetTitle(i) for i in range(1, num+1)])
@@ -72,6 +78,10 @@ class DVD(_dvdread.DVD):
 		"""
 		Get the name of the DVD disc in UTF-8.
 		"""
+
+		if not self.IsOpen:
+			raise AttributeError("GetName: disc is not open")
+
 		if self.name != None:
 			return self.name
 
@@ -86,6 +96,9 @@ class DVD(_dvdread.DVD):
 		Takes the DVD name, changes underscores for spaces, and uses title case.
 		Returns a slightly more human-friendly name of the disc.
 		"""
+
+		if not self.IsOpen:
+			raise AttributeError("GetNameTitleCase: disc is not open")
 
 		n = self.GetName()
 		n = n.replace('_', ' ')
@@ -123,6 +136,9 @@ class Title(_dvdread.Title):
 		@audionum: audio track number starting with one.
 		"""
 
+		if not self.DVD.IsOpen:
+			raise AttributeError("GetTitle: disc is not open")
+
 		if audionum in self.audios:
 			return self.audios[audionum]
 
@@ -134,6 +150,9 @@ class Title(_dvdread.Title):
 		"""
 		Gets a tuple of all the audio track objects starting with audio track one.
 		"""
+
+		if not self.DVD.IsOpen:
+			raise AttributeError("GetAllAudios: disc is not open")
 
 		num = self.NumberOfAudios
 
