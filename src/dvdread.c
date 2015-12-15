@@ -649,14 +649,7 @@ DVD_GetTitle(DVD *self, PyObject *args)
 		return NULL;
 	}
 
-	PyObject *t = PyObject_CallObject(self->TitleClass, a);
-	Py_XDECREF(a);
-	if (t == NULL)
-	{
-		return NULL;
-	}
-
-	return t;
+	return PyObject_CallObject(self->TitleClass, a);
 }
 
 
@@ -1112,13 +1105,7 @@ Title_GetAudio(Title *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	}
 
-	PyObject *t = PyObject_CallObject(self->AudioClass, a);
-	if (t == NULL)
-	{
-		return NULL;
-	}
-
-	return t;
+	return PyObject_CallObject(self->AudioClass, a);
 }
 
 static PyObject*
@@ -1189,13 +1176,7 @@ Title_GetChapter(Title *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	}
 
-	PyObject *t = PyObject_CallObject(self->ChapterClass, a);
-	if (t == NULL)
-	{
-		return NULL;
-	}
-
-	return t;
+	return PyObject_CallObject(self->ChapterClass, a);
 }
 
 static PyObject*
@@ -1235,13 +1216,7 @@ Title_GetSubpicture(Title *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	}
 
-	PyObject *t = PyObject_CallObject(self->SubpictureClass, a);
-	if (t == NULL)
-	{
-		return NULL;
-	}
-
-	return t;
+	return PyObject_CallObject(self->SubpictureClass, a);
 }
 
 
