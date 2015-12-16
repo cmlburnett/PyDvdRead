@@ -1388,6 +1388,13 @@ Audio_getLangCode(Audio *self)
 	char a = self->audio->lang_code >> 8;
 	char b = self->audio->lang_code & 0xFF;
 
+	// I guess this means "hidden" or something
+	if (a == -1 && b == -1)
+	{
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+
 	return PyUnicode_FromFormat("%c%c", a, b);
 }
 
