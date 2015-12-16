@@ -1075,7 +1075,7 @@ Title_getNumberOfChapters(Title *self)
 
 
 static PyObject*
-Title_GetAudio(Title *self, PyObject *args, PyObject *kwds)
+Title_GetAudio(Title *self, PyObject *args)
 {
 	// Ensure device is open to access it
 	if (!_DVD_getIsOpen(self->dvd))
@@ -1084,11 +1084,9 @@ Title_GetAudio(Title *self, PyObject *args, PyObject *kwds)
 		return NULL;
 	}
 
-
 	int audionum;
-	static char *kwlist[] = {"AudioNum", NULL};
 
-	if (! PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &audionum))
+	if (! PyArg_ParseTuple(args, "i", &audionum))
 	{
 		return NULL;
 	}
@@ -1115,7 +1113,7 @@ Title_GetAudio(Title *self, PyObject *args, PyObject *kwds)
 }
 
 static PyObject*
-Title_GetChapter(Title *self, PyObject *args, PyObject *kwds)
+Title_GetChapter(Title *self, PyObject *args)
 {
 	// Ensure device is open to access it
 	if (!_DVD_getIsOpen(self->dvd))
@@ -1126,9 +1124,8 @@ Title_GetChapter(Title *self, PyObject *args, PyObject *kwds)
 
 
 	int chapternum;
-	static char *kwlist[] = {"ChapterNum", NULL};
 
-	if (! PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &chapternum))
+	if (! PyArg_ParseTuple(args, "i", &chapternum))
 	{
 		return NULL;
 	}
@@ -1186,7 +1183,7 @@ Title_GetChapter(Title *self, PyObject *args, PyObject *kwds)
 }
 
 static PyObject*
-Title_GetSubpicture(Title *self, PyObject *args, PyObject *kwds)
+Title_GetSubpicture(Title *self, PyObject *args)
 {
 	// Ensure device is open to access it
 	if (!_DVD_getIsOpen(self->dvd))
@@ -1197,9 +1194,8 @@ Title_GetSubpicture(Title *self, PyObject *args, PyObject *kwds)
 
 
 	int subpicturenum;
-	static char *kwlist[] = {"SubpictureNum", NULL};
 
-	if (! PyArg_ParseTupleAndKeywords(args, kwds, "i", kwlist, &subpicturenum))
+	if (! PyArg_ParseTuple(args, "i", &subpicturenum))
 	{
 		return NULL;
 	}
