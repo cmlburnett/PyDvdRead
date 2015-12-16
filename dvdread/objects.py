@@ -194,8 +194,10 @@ class Title(_dvdread.Title):
 
 		_dvdread.Title.__init__(self, DVD, IFONum, TitleNum, AudioClass=AudioClass, ChapterClass=ChapterClass, SubpictureClass=SubpictureClass)
 		self.audios = {}
+		self.chapters = {}
+		self.subpictures = {}
 
-	def GetAudio(self, audionum):
+	def GetAudio(self, num):
 		"""
 		Gets the specified audio track.
 		@audionum: audio track number starting with one.
@@ -204,12 +206,45 @@ class Title(_dvdread.Title):
 		if not self.DVD.IsOpen:
 			raise AttributeError("GetTitle: disc is not open")
 
-		if audionum in self.audios:
-			return self.audios[audionum]
+		if num in self.audios:
+			return self.audios[num]
 
-		i = _dvdread.Title.GetAudio(self, audionum)
-		self.audios[audionum] = i
+		i = _dvdread.Title.GetAudio(self, num)
+		self.audios[num] = i
 		return i
+
+	def GetChapter(self, num):
+		"""
+		Gets the specified chapter.
+		@num: chapter number starting with one.
+		"""
+
+		if not self.DVD.IsOpen:
+			raise AttributeError("GetChapter: disc is not open")
+
+		if num in self.chapters:
+			return self.chapters[num]
+
+		i = _dvdread.Title.GetChapter(self, num)
+		self.chapters[num] = i
+		return i
+
+	def GetSubpicture(self, num):
+		"""
+		Gets the specified subpicture track.
+		@num: subpicture track number starting with one.
+		"""
+
+		if not self.DVD.IsOpen:
+			raise AttributeError("GetSubpicture: disc is not open")
+
+		if num in self.subpictures:
+			return self.subpictures[num]
+
+		i = _dvdread.Title.GetSubpicture(self, num)
+		self.subpictures[num] = i
+		return i
+
 
 	def GetAllAudios(self):
 		"""
@@ -222,6 +257,30 @@ class Title(_dvdread.Title):
 		num = self.NumberOfAudios
 
 		return tuple([self.GetAudio(i) for i in range(1, num+1)])
+
+	def GetAllChapters(self):
+		"""
+		Gets a tuple of all the chapter objects starting with chapter one.
+		"""
+
+		if not self.DVD.IsOpen:
+			raise AttributeError("GetAllChapters: disc is not open")
+
+		num = self.NumberOfChapters
+
+		return tuple([self.GetChapter(i) for i in range(1, num+1)])
+
+	def GetAllSubpictures(self):
+		"""
+		Gets a tuple of all the subpicture objects starting with subpicture one.
+		"""
+
+		if not self.DVD.IsOpen:
+			raise AttributeError("GetAllSubpictures: disc is not open")
+
+		num = self.NumberOfSubpictures
+
+		return tuple([self.GetSubpicture(i) for i in range(1, num+1)])
 
 class Audio(_dvdread.Audio):
 	"""
