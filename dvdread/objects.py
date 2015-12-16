@@ -56,7 +56,8 @@ class Disc:
 	def dvd_discid(path):
 		"""
 		Gets the ID of the DVD disc.
-		This is the Volume id from the output of isoinfo.
+		This is the Volume id and volume size from the output of isoinfo.
+		Volume id is not always sufficient to be unique enough to be usable.
 		"""
 
 		vid = None
