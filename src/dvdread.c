@@ -343,13 +343,13 @@ DVD_init(DVD *self, PyObject *args, PyObject *kwds)
 	tmp = self->path;
 	Py_INCREF(path);
 	self->path = path;
-	Py_XDECREF(tmp);
+	Py_CLEAR(tmp);
 
 	// TitleClass
 	tmp = self->TitleClass;
 	Py_INCREF(titleclass);
 	self->TitleClass = titleclass;
-	Py_XDECREF(tmp);
+	Py_CLEAR(tmp);
 
 	return 0;
 }
@@ -761,7 +761,7 @@ Title_init(Title *self, PyObject *args, PyObject *kwds)
 	tmp = (PyObject*)self->dvd;
 	Py_INCREF(dvd);
 	self->dvd = dvd;
-	Py_XDECREF(tmp);
+	Py_CLEAR(tmp);
 
 	ifo_handle_t *zero = self->dvd->ifos[0];
 
@@ -798,19 +798,19 @@ Title_init(Title *self, PyObject *args, PyObject *kwds)
 	tmp = self->AudioClass;
 	Py_INCREF(audioclass);
 	self->AudioClass = audioclass;
-	Py_XDECREF(tmp);
+	Py_CLEAR(tmp);
 
 	// ChapterClass
 	tmp = self->ChapterClass;
 	Py_INCREF(chapterclass);
 	self->ChapterClass = chapterclass;
-	Py_XDECREF(tmp);
+	Py_CLEAR(tmp);
 
 	// SubpictureClass
 	tmp = self->SubpictureClass;
 	Py_INCREF(subpictureclass);
 	self->SubpictureClass = subpictureclass;
-	Py_XDECREF(tmp);
+	Py_CLEAR(tmp);
 
 	return 0;
 }
@@ -1347,7 +1347,7 @@ Audio_init(Audio *self, PyObject *args, PyObject *kwds)
 	tmp = (PyObject*)self->title;
 	Py_INCREF(title);
 	self->title = title;
-	Py_XDECREF(tmp);
+	Py_CLEAR(tmp);
 
 	return 0;
 }
@@ -1568,14 +1568,14 @@ Chapter_init(Chapter *self, PyObject *args, PyObject *kwds)
 	tmp = (PyObject*)self->lenfancy;
 	Py_INCREF(lenfancy);
 	self->lenfancy = lenfancy;
-	Py_XDECREF(tmp);
+	Py_CLEAR(tmp);
 
 
 	// Assign Title object
 	tmp = (PyObject*)self->title;
 	Py_INCREF(title);
 	self->title = title;
-	Py_XDECREF(tmp);
+	Py_CLEAR(tmp);
 
 	return 0;
 }
@@ -1794,7 +1794,7 @@ Subpicture_init(Subpicture *self, PyObject *args, PyObject *kwds)
 	tmp = (PyObject*)self->title;
 	Py_INCREF(title);
 	self->title = title;
-	Py_XDECREF(tmp);
+	Py_CLEAR(tmp);
 
 	return 0;
 }
