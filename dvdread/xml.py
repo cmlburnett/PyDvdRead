@@ -36,6 +36,9 @@ def attresc(v):
 	"""
 	Neither xml.sax.saxutils.escape nor xml.sax.saxutils.attrquote check the validity of each character. Lame.
 	"""
+	if v == None:
+		return ""
+
 	v = XMLescape(v)
 
 	ret = []
