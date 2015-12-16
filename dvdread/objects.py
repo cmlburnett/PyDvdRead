@@ -6,7 +6,66 @@ Note that these classes are passed back to the C objects to be created (see the 
 
 import _dvdread
 
+import glob
 import os
+import subprocess
+
+class Disc:
+	"""
+	Utility functions.
+	"""
+
+	@staticmethod
+	def Check(globpath):
+		"""
+		Checks drives based on a glob path @globpath.
+		Returned is a 3-tuple of (path, disc_type, and discid) where disc_type is 'cd' or 'dvd'.
+		"""
+
+		ret = []
+
+		paths = glob.glob(globpath)
+		for path in paths:
+			# Call udevadm to get drive status
+			lines = subprocess.check_output(['udevadm', 'info', '-q', 'all', path], universal_newlines=True).split('\n')
+
+			for line in lines:
+				parts = line.split(' ', 2)
+				if len(parts) != 2: continue
+
+				discid = None
+				typ = None
+				if parts[1] == 'ID_CDROM_MEDIA_CD=1':
+					ret.append( (path, 'cd', Disc.cd_discid(path)) )
+				elif parts[1] == 'ID_CDROM_MEDIA_DVD=1':
+					ret.append( (path, 'dvd', Disc.dvd_discid(path)) )
+
+		return ret
+
+	@staticmethod
+	def cd_discid(path):
+		"""
+		Gets the ID of the CD disc.
+		This is from the cd-discid program that aggregates information about the tracks since CDs have no unique identifier otherwise.
+		This is the same ID used for CDDB.
+		"""
+
+		return subprocess.check_output(['cd-discid', path]).split('\n')[0]
+
+	@staticmethod
+	def dvd_discid(path):
+		"""
+		Gets the ID of the DVD disc.
+		This is the Volume id from the output of isoinfo.
+		"""
+
+		lines = subprocess.check_output(['isoinfo', '-d', '-i', path]).split('\n')
+		for line in lines:
+			parts = line.split(':')
+			if parts[0].lower().startswith('volume id'):
+				return parts[1].strip()
+
+		return None
 
 class DVD(_dvdread.DVD):
 	"""
