@@ -1829,6 +1829,13 @@ Subpicture_getLangCode(Subpicture *self)
 	char a = self->subpicture->lang_code >> 8;
 	char b = self->subpicture->lang_code & 0xFF;
 
+	// I guess this means "hidden" or something
+	if (a == -1 && b == -1)
+	{
+		Py_INCREF(Py_None);
+		return Py_None;
+	}
+
 	return PyUnicode_FromFormat("%c%c", a, b);
 }
 
