@@ -398,6 +398,7 @@ DVD_getPath(DVD *self)
 		return NULL;
 	}
 
+	Py_INCREF(self->path);
 	return self->path;
 }
 
