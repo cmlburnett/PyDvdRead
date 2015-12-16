@@ -46,28 +46,40 @@ def DVDToXML(device, pretty=True):
 			t = d.GetTitle(i)
 
 
-			title = titles.AddChild( node('title', idx=t.TitleNum) )
-			title.AddChild( tnode('length', t.PlaybackTime, fancy=t.PlaybackTimeFancy) )
-			title.AddChild( node('picture', aspectratio=t.AspectRatio, framerate=t.FrameRate, width=t.Width, height=t.Height) )
-			title.AddChild( node('angle', num=t.NumberOfAngles) )
+			try:
+				title = titles.AddChild( node('title', idx=t.TitleNum) )
+				title.AddChild( tnode('length', t.PlaybackTime, fancy=t.PlaybackTimeFancy) )
+				title.AddChild( node('picture', aspectratio=t.AspectRatio, framerate=t.FrameRate, width=t.Width, height=t.Height) )
+				title.AddChild( node('angle', num=t.NumberOfAngles) )
+			except Exception as e:
+				raise Exception('Exception caught when adding title %d' % (i,)) from e
 
 			audios = title.AddChild( node('audios', num=t.NumberOfAudios) )
 			for j in range(1, t.NumberOfAudios+1):
-				a = t.GetAudio(j)
-				audio = audios.AddChild( node('audio', idx=j, langcode=a.LangCode, language=a.Language, format=a.Format, samplingrate=a.SamplingRate) )
+				try:
+					a = t.GetAudio(j)
+					audio = audios.AddChild( node('audio', idx=j, langcode=a.LangCode, language=a.Language, format=a.Format, samplingrate=a.SamplingRate) )
+				except Exception as e:
+					raise Exception('Exception caught when adding audio %d to title %d' % (j,i)) from e
 
 			chapters = title.AddChild( node('chapters', num=t.NumberOfChapters) )
 			for j in range(1, t.NumberOfChapters+1):
-				c = t.GetChapter(j)
-				chapter = chapters.AddChild( node('chapter', idx=j) )
-				chapter.AddChild( tnode('length', c.Length, fancy=c.LengthFancy) )
-				chapter.AddChild( node('cells', start=c.StartCell, end=c.EndCell) )
+				try:
+					c = t.GetChapter(j)
+					chapter = chapters.AddChild( node('chapter', idx=j) )
+					chapter.AddChild( tnode('length', c.Length, fancy=c.LengthFancy) )
+					chapter.AddChild( node('cells', start=c.StartCell, end=c.EndCell) )
+				except Exception as e:
+					raise Exception('Exception caught when adding chapter %d to title %d' % (j,i)) from e
 
 
 			subpictures = title.AddChild( node('subpictures', num=t.NumberOfSubpictures) )
 			for j in range(1, t.NumberOfSubpictures+1):
-				s = t.GetSubpicture(j)
-				subpicture = subpictures.AddChild( node('subpicture', idx=j, langcode=s.LangCode, language=s.Language) )
+				try:
+					s = t.GetSubpicture(j)
+					subpicture = subpictures.AddChild( node('subpicture', idx=j, langcode=s.LangCode, language=s.Language) )
+				except Exception as e:
+					raise Exception('Exception caught when adding subtitle %d to title %d' % (j,i)) from e
 
 	if pretty:
 		return root.OuterXMLPretty
