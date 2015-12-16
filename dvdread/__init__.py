@@ -13,14 +13,14 @@ http://dvd.sourceforge.net/dvdinfo/index.html
 https://en.wikipedia.org/wiki/DVD-Video
 """
 
-__all__ = ['DVD', 'Title', 'Chapter', 'Audio', 'Subpicture', 'tnode', 'node', 'DVDToXML']
+__all__ = ['Disc', 'DVD', 'Title', 'Chapter', 'Audio', 'Subpicture', 'tnode', 'node', 'DVDToXML']
 
 # Import and get C's version
 import _dvdread
 Version = _dvdread.Version
 
 # Get C object wrappers
-from .objects import DVD, Title, Chapter, Audio, Subpicture
+from .objects import Disc, DVD, Title, Chapter, Audio, Subpicture
 
 # Get XML implementation
 from .xml import tnode, node

@@ -50,7 +50,7 @@ class Disc:
 		This is the same ID used for CDDB.
 		"""
 
-		return subprocess.check_output(['cd-discid', path]).split('\n')[0]
+		return subprocess.check_output(['cd-discid', path]).decode('latin-1').split('\n')[0]
 
 	@staticmethod
 	def dvd_discid(path):
@@ -59,7 +59,7 @@ class Disc:
 		This is the Volume id from the output of isoinfo.
 		"""
 
-		lines = subprocess.check_output(['isoinfo', '-d', '-i', path]).split('\n')
+		lines = subprocess.check_output(['isoinfo', '-d', '-i', path]).decode('latin-1').split('\n')
 		for line in lines:
 			parts = line.split(':')
 			if parts[0].lower().startswith('volume id'):
