@@ -128,18 +128,6 @@ class DVD(_dvdread.DVD):
 		self.titles[titlenum] = i
 		return i;
 
-	def GetAllTitles(self):
-		"""
-		Gets a tuple of all the title objects starting with title one.
-		"""
-
-		if not self.IsOpen:
-			raise AttributeError("GetAllTitles: disc is not open")
-
-		num = self.NumberOfTitles
-
-		return tuple([self.GetTitle(i) for i in range(1, num+1)])
-
 	def GetName(self):
 		"""
 		Get the name of the DVD disc in UTF-8.
