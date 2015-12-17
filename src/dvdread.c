@@ -2124,6 +2124,10 @@ PyInit__dvdread(void)
 
 	// Add the types to the module
 	Py_INCREF(&DvdType);
+	Py_INCREF(&TitleType);
+	Py_INCREF(&AudioType);
+	Py_INCREF(&ChapterType);
+	Py_INCREF(&SubpictureType);
 	PyModule_AddObject(m, "DVD", (PyObject*)&DvdType);
 	PyModule_AddObject(m, "Title", (PyObject*)&TitleType);
 	PyModule_AddObject(m, "Audio", (PyObject*)&AudioType);
