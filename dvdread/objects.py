@@ -135,7 +135,7 @@ class Disc:
 					raise Exception("Failed to copy remaining %d blocks (total %d) of disc '%s' to drive" % (blocks - int(cursize/blocksize)+1, blocks, label))
 
 		else:
-			# Dup entirey disc to drive
+			# Dup entire disc to drive
 			args = ['dd', 'if=%s'%inf, 'of=%s'%outf, 'bs=%d'%blocksize, 'count=%d'%blocks]
 			print(" ".join(args))
 			ret = subprocess.call(args)
