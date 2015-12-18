@@ -1166,6 +1166,12 @@ Title_GetChapter(Title *self, PyObject *args)
 		endcell = pgc->program_map[ chapternum-1 + 1] - 1;
 	}
 
+	// It's possible that the endcell can be calculated to be negative...so just assume zero???
+	if (endcell < 0)
+	{
+		endcell = 0;
+	}
+
 	// Length requires iterating over cells
 	lenms = 0;
 	for (int i=startcell; i <= endcell; i++)
