@@ -692,7 +692,7 @@ Title_new(PyTypeObject *type, PyObject *args, PyObject *kwds)
 		self->ifonum = 0;
 		self->titlenum = 0;
 
-		Py_INCREF(Py_None)Py_INCREF(Py_None);;Py_INCREF(Py_None);
+		Py_INCREF(Py_None);Py_INCREF(Py_None);Py_INCREF(Py_None);
 		self->AudioClass = Py_None;
 		self->ChapterClass = Py_None;
 		self->SubpictureClass = Py_None;
