@@ -74,6 +74,74 @@ class Disc:
 
 		return "%s - %s" % (vid,sz)
 
+	@staticmethod
+	def dd(inf, outf, blocksize, blocks, label):
+		"""
+		Perform a 'resumable' dd copy from @inf to @ouf using the given blocksize and number of blocks.
+		The @label is used in exceptions to be descriptive.
+
+		The resumable aspect:
+		1) If @outf exists, then the sizes are compared
+		2) If the @outf size is the same as what is expected then nothing is done
+		3) If the @outf size is not a multiple of @blocksize, the remainder of the block is copied with blocksize=1
+		4) If the @outf size is a multiple of @blocksize, the remainder of the blocks are copied by seek and skip appropriately.
+		5) If @outf does not exist, then the entire @inf is copied.
+
+		Commands used:
+			Partial block copy:   ['dd', 'if=%s'%inf, 'of=%s'%outf, 'bs=1', 'count=%d' % (blocksize - (cursize % blocksize)), 'skip=%d'%cursize, 'seek=%d'%cursize]
+			Remaining block copy: ['dd', 'if=%s'%inf, 'of=%s'%outf, 'bs=1', 'count=%d' % (blocksize - (cursize % blocksize)), 'skip=%d'%cursize, 'seek=%d'%cursize]
+			Remaining block copy: ['dd', 'if=%s'%inf, 'of=%s'%outf, 'bs=%d' % blocksize, 'count=%d' % (blocksize - (cursize % blocksize)), 'skip=%d'%cursize, 'seek=%d'%cursize]
+			Full block copy:      ['dd', 'if=%s'%inf, 'of=%s'%outf, 'bs=%d'%blocksize, 'count=%d'%blocks]
+
+		Where cursize is given by os.path.getsize().
+		"""
+
+		# Get expected total size
+		expectedsize = blocksize * blocks
+
+		if os.path.exists(outf):
+			cursize = os.path.getsize(outf)
+
+			# If sizes are the same, then no need to copy
+			if expectedsize == cursize:
+				print("Disc already copied")
+				return
+
+			elif expectedsize < cursize:
+				print("Disc already copied")
+				# Um, ok, I guess it's done copying
+				return
+
+			else:
+				# Partial copy
+				print("Partial copy: blocksize=%d, blocks=%d, mod=%d" % (blocksize, blocks, blocksize - (cursize % blocksize)))
+
+				# First, need to copy remaining block
+				if cursize % blocksize != 0:
+					print("Partial block copy")
+					# Finish remainder of block
+					args = ['dd', 'if=%s'%inf, 'of=%s'%outf, 'bs=1', 'count=%d' % (blocksize - (cursize % blocksize)), 'skip=%d'%cursize, 'seek=%d'%cursize]
+					print(" ".join(args))
+					ret = subprocess.call(args)
+					if ret != 0:
+						raise Exception("Failed to partial copy remaining block %d of disc '%s' to drive" % (int(cursize/blocksize)+1, label))
+
+				print("Partial copy")
+				# Finish remainder of disc
+				args = ['dd', 'if=%s'%inf, 'of=%s'%outf, 'bs=%d' % blocksize, 'count=%d' % (blocksize - (cursize % blocksize)), 'skip=%d'%cursize, 'seek=%d'%cursize]
+				print(" ".join(args))
+				ret = subprocess.call(args)
+				if ret != 0:
+					raise Exception("Failed to copy remaining %d blocks (total %d) of disc '%s' to drive" % (blocks - int(cursize/blocksize)+1, blocks, label))
+
+		else:
+			# Dup entirey disc to drive
+			args = ['dd', 'if=%s'%inf, 'of=%s'%outf, 'bs=%d'%blocksize, 'count=%d'%blocks]
+			print(" ".join(args))
+			ret = subprocess.call(args)
+			if ret != 0:
+				raise Exception("Failed to copy disc '%s' to drive" % label)
+
 class DVD(_dvdread.DVD):
 	"""
 	Entry class into parsing the DVD structure.
