@@ -1552,7 +1552,7 @@ Chapter_init(Chapter *self, PyObject *args, PyObject *kwds)
 	// Bounds check on start
 	if (start < 0)
 	{
-		PyErr_SetString(PyExc_ValueError, "Start cell number cannot be negative");
+		PyErr_Format(PyExc_ValueError, "Start cell number cannot be negative (%d)", start);
 		return -1;
 	}
 	self->startcell = start;
@@ -1560,7 +1560,7 @@ Chapter_init(Chapter *self, PyObject *args, PyObject *kwds)
 	// Bounds check on end
 	if (end < 0)
 	{
-		PyErr_SetString(PyExc_ValueError, "End cell number cannot be negative");
+		PyErr_Format(PyExc_ValueError, "End cell number cannot be negative (%d)", end);
 		return -1;
 	}
 	self->endcell = end;
