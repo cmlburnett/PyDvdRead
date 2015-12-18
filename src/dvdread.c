@@ -529,7 +529,7 @@ DVD_Open(DVD *self)
 		self->ifos[i] = ifoOpen(self->dvd, i);
 		if (!self->ifos[i])
 		{
-			PyErr_SetString(PyExc_Exception, "Could not open IFO");
+			PyErr_Format(PyExc_Exception, "Could not open IFO %d", i);
 			goto error;
 		}
 	}
