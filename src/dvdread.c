@@ -632,12 +632,12 @@ DVD_GetTitle(DVD *self, PyObject *args)
 	// Bounds check
 	if (title < 1)
 	{
-		PyErr_SetString(PyExc_ValueError, "Title must be non-negative");
+		PyErr_Format(PyExc_ValueError, "Title must be non-negative (%d)", title);
 		return NULL;
 	}
 	if (title > self->numtitles)
 	{
-		PyErr_SetString(PyExc_ValueError, "Title value too large");
+		PyErr_Format(PyExc_ValueError, "Title value too large (%d > %d)", title, self->numtitles);
 		return NULL;
 	}
 
@@ -733,12 +733,12 @@ Title_init(Title *self, PyObject *args, PyObject *kwds)
 	// Bounds check on ifonum
 	if (ifonum < 0)
 	{
-		PyErr_SetString(PyExc_ValueError, "IFO number cannot be negative");
+		PyErr_Format(PyExc_ValueError, "IFO number cannot be negative (%d)", ifonum);
 		return -1;
 	}
 	if (ifonum > dvd->numifos)
 	{
-		PyErr_SetString(PyExc_ValueError, "IFO number is too large");
+		PyErr_Format(PyExc_ValueError, "IFO number is too large (%d > %d)", ifonum, dvd->numifos);
 		return -1;
 	}
 	self->ifonum = ifonum;
@@ -746,12 +746,12 @@ Title_init(Title *self, PyObject *args, PyObject *kwds)
 	// Bounds check on title
 	if (titlenum < 0)
 	{
-		PyErr_SetString(PyExc_ValueError, "Title number cannot be negative");
+		PyErr_Format(PyExc_ValueError, "Title number cannot be negative (%d)", titlenum);
 		return -1;
 	}
 	if (titlenum > dvd->numtitles)
 	{
-		PyErr_SetString(PyExc_ValueError, "Title number is too large");
+		PyErr_Format(PyExc_ValueError, "Title number is too large (%d > %d)", titlenum, dvd->numtitles);
 		return -1;
 	}
 	self->titlenum = titlenum;
@@ -1096,12 +1096,12 @@ Title_GetAudio(Title *self, PyObject *args)
 	// Bounds check
 	if (audionum < 1)
 	{
-		PyErr_SetString(PyExc_ValueError, "Audio track must be positive");
+		PyErr_Format(PyExc_ValueError, "Audio track must be positive (%d)", audionum);
 		return NULL;
 	}
 	if (audionum > self->numaudios)
 	{
-		PyErr_SetString(PyExc_ValueError, "Audio track too large");
+		PyErr_Format(PyExc_ValueError, "Audio track too large (%d > %d)", audionum, self->numaudios);
 		return NULL;
 	}
 
@@ -1135,12 +1135,12 @@ Title_GetChapter(Title *self, PyObject *args)
 	// Bounds check
 	if (chapternum < 1)
 	{
-		PyErr_SetString(PyExc_ValueError, "Chapter must be positive");
+		PyErr_Format(PyExc_ValueError, "Chapter must be positive (%d)", chapternum);
 		return NULL;
 	}
 	if (chapternum > self->numchapters)
 	{
-		PyErr_SetString(PyExc_ValueError, "Chapter track too large");
+		PyErr_Format(PyExc_ValueError, "Chapter track too large (%d > %d)", chapternum, self->numchapters);
 		return NULL;
 	}
 
@@ -1211,12 +1211,12 @@ Title_GetSubpicture(Title *self, PyObject *args)
 	// Bounds check
 	if (subpicturenum < 1)
 	{
-		PyErr_SetString(PyExc_ValueError, "Subpicture track must be positive");
+		PyErr_Format(PyExc_ValueError, "Subpicture track must be positive (%d)", subpicturenum);
 		return NULL;
 	}
 	if (subpicturenum > self->numsubpictures)
 	{
-		PyErr_SetString(PyExc_ValueError, "Subpicture track too large");
+		PyErr_Format(PyExc_ValueError, "Subpicture track too large (%d > %d)", subpicturenum, self->numsubpictures);
 		return NULL;
 	}
 
@@ -1313,12 +1313,12 @@ Audio_init(Audio *self, PyObject *args, PyObject *kwds)
 	// Bounds check on audionum
 	if (audionum < 0)
 	{
-		PyErr_SetString(PyExc_ValueError, "Audio number cannot be negative");
+		PyErr_Format(PyExc_ValueError, "Audio number cannot be negative (%d)", audionum);
 		return -1;
 	}
 	if (audionum > title->numaudios)
 	{
-		PyErr_SetString(PyExc_ValueError, "Audio number is too large");
+		PyErr_Format(PyExc_ValueError, "Audio number is too large (%d > %d)", audionum, title->numaudios);
 		return -1;
 	}
 	self->audionum = audionum;
@@ -1539,12 +1539,12 @@ Chapter_init(Chapter *self, PyObject *args, PyObject *kwds)
 	// Bounds check on chapternum
 	if (chapternum < 0)
 	{
-		PyErr_SetString(PyExc_ValueError, "Chapter number cannot be negative");
+		PyErr_Format(PyExc_ValueError, "Chapter number cannot be negative (%d)", chapternum);
 		return -1;
 	}
 	if (chapternum > title->numchapters)
 	{
-		PyErr_SetString(PyExc_ValueError, "Chapter number is too large");
+		PyErr_Format(PyExc_ValueError, "Chapter number is too large (%d > %d)", chapternum, title->numchapters);
 		return -1;
 	}
 	self->chapternum = chapternum;
@@ -1757,12 +1757,12 @@ Subpicture_init(Subpicture *self, PyObject *args, PyObject *kwds)
 	// Bounds check on subpicturenum
 	if (subpicturenum < 0)
 	{
-		PyErr_SetString(PyExc_ValueError, "Subpicture number cannot be negative");
+		PyErr_Format(PyExc_ValueError, "Subpicture number cannot be negative (%d)", subpicturenum);
 		return -1;
 	}
 	if (subpicturenum > title->numsubpictures)
 	{
-		PyErr_SetString(PyExc_ValueError, "Subpicture number is too large");
+		PyErr_Format(PyExc_ValueError, "Subpicture number is too large (%d > %d)", subpicturenum, title->numsubpictures);
 		return -1;
 	}
 	self->subpicturenum = subpicturenum;
@@ -1790,7 +1790,7 @@ Subpicture_init(Subpicture *self, PyObject *args, PyObject *kwds)
 	}
 	if (self->subpicture == NULL)
 	{
-		PyErr_SetString(PyExc_ValueError, "Subpicture number too large");
+		PyErr_Format(PyExc_ValueError, "Subpicture number too large (%d > %d)", found, subpicturenum);
 		return -1;
 	}
 
