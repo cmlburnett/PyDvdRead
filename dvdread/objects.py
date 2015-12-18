@@ -126,9 +126,15 @@ class Disc:
 					if ret != 0:
 						raise Exception("Failed to partial copy remaining block %d of disc '%s' to drive" % (int(cursize/blocksize)+1, label))
 
+				# Get [possibly] updated size
+				cursize = os.path.getsize(outf)
+
 				print("Partial copy")
 				# Finish remainder of disc
-				args = ['dd', 'if=%s'%inf, 'of=%s'%outf, 'bs=%d' % blocksize, 'count=%d' % (blocksize - (cursize % blocksize)), 'skip=%d'%cursize, 'seek=%d'%cursize]
+				#   * Blocks written: int(cursize / blocksize)
+				#   * Remaining blocks: blocks - int(cursize / blocksize)
+				#   * Starting block: int(cursize / blocksize)
+				args = ['dd', 'if=%s'%inf, 'of=%s'%outf, 'bs=%d' % blocksize, 'count=%d' % (blocks - int(cursize / blocksize)), 'skip=%d'%int(cursize/blocksize), 'seek=%d'%int(cursize/blocksize)]
 				print(" ".join(args))
 				ret = subprocess.call(args)
 				if ret != 0:
