@@ -151,6 +151,42 @@ class Disc:
 			if ret != 0:
 				raise Exception("Failed to copy disc '%s' to drive" % label)
 
+	@staticmethod
+	def dvd_GetSize(path):
+		"""
+		Get label, block size, and # of blocks from the disc (returned as a tuple in that order).
+		Using block size and blocks, instead of not specifying them, per this page
+		  https://www.thomas-krenn.com/en/wiki/Create_an_ISO_Image_from_a_source_CD_or_DVD_under_Linux
+		Seems the more prudent choice.
+		"""
+
+		# Get information from isoinfo
+		ret = subprocess.check_output(["isoinfo", "-d", "-i",path], universal_newlines=True)
+		lines = ret.split("\n")
+
+		label = None
+		blocksize = None
+		blocks = None
+
+		# Have to iterate through the output to find the desired lines
+		for line in lines:
+			parts = line.split(':')
+			parts = [p.strip() for p in parts]
+
+			if parts[0] == 'Volume id':						label = parts[1]
+			elif parts[0] == 'Logical block size is':		blocksize = int(parts[1])
+			elif parts[0] == 'Volume size is':				blocks = int(parts[1])
+			else:
+				# Don't care
+				pass
+
+		# Make sure all three are present
+		if label == None:		raise Exception("Could not find volume label")
+		if blocksize == None:	raise Exception("Could not find block size")
+		if blocks == None:		raise Exception("Could not find number of blocks")
+
+		return (label,blocksize,blocks)
+
 class DVD(_dvdread.DVD):
 	"""
 	Entry class into parsing the DVD structure.
