@@ -61,18 +61,21 @@ class Disc:
 		"""
 
 		vid = None
+		vsid = None
 		sz = None
 
 		lines = subprocess.check_output(['isoinfo', '-d', '-i', path]).decode('latin-1').split('\n')
 		for line in lines:
 			parts = line.split(':')
 			if parts[0].lower().startswith('volume id'): vid = parts[1].strip()
+			if parts[0].lower().startswith('volume set id'): vsid = parts[1].strip()
 			if parts[0].lower().startswith('volume size'): sz = parts[1].strip()
 
 		if vid == None:		raise ValueError("Did not find volume id in isoinfo output")
+		if vsid == None:	raise ValueError("Did not find volume set id in isoinfo output")
 		if sz == None:		raise ValueError("Did not find volume size in isoinfo output")
 
-		return "%s - %s" % (vid,sz)
+		return "%s - %s - %s" % (vid,vsid,sz)
 
 	@staticmethod
 	def dd(inf, outf, blocksize, blocks, label):
