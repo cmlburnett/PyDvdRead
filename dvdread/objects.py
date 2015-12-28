@@ -39,6 +39,8 @@ class Disc:
 					ret.append( (path, 'cd', Disc.cd_discid(path)) )
 				elif parts[1] == 'ID_CDROM_MEDIA_DVD=1':
 					ret.append( (path, 'dvd', Disc.dvd_discid(path)) )
+				elif parts[1] == 'ID_CDROM_MEDIA_BD=1':
+					ret.append( (path, 'br', Disc.br_discid(path)) )
 
 		return ret
 
@@ -76,6 +78,34 @@ class Disc:
 		if sz == None:		raise ValueError("Did not find volume size in isoinfo output")
 
 		return "%s - %s - %s" % (vid,vsid,sz)
+
+	@staticmethod
+	def br_discid(path):
+		lines = subprocess.check_output(['blkid', '-s', 'LABEL', '-o', 'value', path]).decode('latin-1').split('\n')
+		label = lines[0].strip()
+		if not len(label):
+			raise ValueError("Failed to get LABEL for '%s'" % path)
+
+		lines = subprocess.check_output(['blkid', '-s', 'UUID', '-o', 'value', path]).decode('latin-1').split('\n')
+		uuid = lines[0].strip()
+		if not len(uuid):
+			raise ValueError("Failed to get UUID for '%s'" % path)
+
+		return "%s - %s" % (label, uuid)
+
+	@staticmethod
+	def br_getSize(path):
+		label,uuid = __class__.br_discid(path).split(' - ')
+
+		lines = subprocess.check_output(['blockdev', '--getbsz', path]).decode('latin-1').split('\n')
+		blocksize = int(lines[0])
+
+		lines = subprocess.check_output(['blockdev', '--getsize64', path]).decode('latin-1').split('\n')
+		size = int(lines[0])
+
+		blocks = int(size / blocksize)
+
+		return (label,blocksize,blocks)
 
 	@staticmethod
 	def dd(inf, outf, blocksize, blocks, label):
