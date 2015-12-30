@@ -13,7 +13,7 @@ http://dvd.sourceforge.net/dvdinfo/index.html
 https://en.wikipedia.org/wiki/DVD-Video
 """
 
-__all__ = ['Disc', 'DVD', 'Title', 'Chapter', 'Audio', 'Subpicture', 'tnode', 'node', 'DVDToXML']
+__all__ = ['Disc', 'DVD', 'Title', 'Chapter', 'Audio', 'Subpicture', 'DVDToXML']
 
 # Import and get C's version
 import _dvdread
@@ -23,7 +23,7 @@ Version = _dvdread.Version
 from .objects import Disc, DVD, Title, Chapter, Audio, Subpicture
 
 # Get XML implementation
-from .xml import tnode, node
+from crudexml import tnode, node
 
 def DVDToXML(device, pretty=True):
 	"""
