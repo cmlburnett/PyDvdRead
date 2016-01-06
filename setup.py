@@ -2,7 +2,7 @@ import sys
 from distutils.core import setup, Extension
 
 majv = 1
-minv = 0
+minv = 1
 
 if sys.version_info < (3,):
 	print("This library is only tested with Python 3.4")
@@ -26,6 +26,7 @@ setup(
 	author = 'Colin ML Burnett',
 	author_email = 'cmlburnett@gmail.com',
 	url = "https://github.com/cmlburnett/PyDvdRead",
+	dwonload_url = "https://pypi.python.org/pypi/dvdread",
 	packages = ['dvdread'],
 	ext_modules = [dvdread4],
 	requires = ['crudexml'],
