@@ -3,4 +3,5 @@
 *.swp
 
 build/
+dist/
 .AppleDouble/
