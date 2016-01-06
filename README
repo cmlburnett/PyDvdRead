@@ -82,5 +82,3 @@ This module contains two parts:
 
 The C objects are defined within the /src/ directory and the Python objects in the /dvdread/ directory. The C objects are defined in the _dvdread module and the Python objects in the dvdread module.
 
-Included in the /dvdread/ directory is a crude and simple XML DOM implementation. The purpose of this XML DOM is to create the hierarchical structure to produce valid XML output. It would probably be prudent to use a "real" DOM implementation, but this works and it was fast to implement.
-
