@@ -19,7 +19,68 @@ class Disc:
 	def Check(globpath):
 		"""
 		Checks drives based on a glob path @globpath.
-		Returned is a 3-tuple of (path, disc_type, and discid) where disc_type is 'cd' or 'dvd'.
+		Returned is a 3-tuple of (path, disc_type, and discid) where disc_type is 'br', 'dvd', or 'cd'.
+
+		I have not tried multi-mode discs, so I have no idea what udevadm returns.
+		My suspicion is that there are multiple media keys that would match.
+
+		Sample output of udevadm that is expected is shown below (only serial number is removed).
+		This drive is a BR/DVD/CD combo drive that currently has a CD inserted.
+		The three keys of interest are ID_CDROM_MEDIA_CD=1, ID_CDROM_MEDIA_DVD=1, and ID-CDROM_MEDIA_BD=1.
+		These indicate the type of media inserted.
+		Depending on which is set, the appropriate function is called to return an ID for the media.
+
+		$ udevadm info -q all /dev/sr0
+		P: /devices/pci0000:00/0000:00:1f.2/ata1/host0/target0:0:1/0:0:1:0/block/sr0
+		N: sr0
+		L: -100
+		S: cdrom
+		S: cdrw
+		S: disk/by-id/ata-HL-DT-ST_BD-RE_BH12LS38_K91B6A95648
+		S: dvd
+		S: dvdrw
+		E: DEVLINKS=/dev/cdrom /dev/disk/by-id/ata-HL-DT-ST_BD-RE_XXXXXXXXXX /dev/cdrw /dev/dvd /dev/dvdrw
+		E: DEVNAME=/dev/sr0
+		E: DEVPATH=/devices/pci0000:00/0000:00:1f.2/ata1/host0/target0:0:1/0:0:1:0/block/sr0
+		E: DEVTYPE=disk
+		E: ID_ATA=1
+		E: ID_ATA_FEATURE_SET_PM=1
+		E: ID_ATA_FEATURE_SET_PM_ENABLED=0
+		E: ID_ATA_SATA=1
+		E: ID_ATA_SATA_SIGNAL_RATE_GEN1=1
+		E: ID_BUS=ata
+		E: ID_CDROM=1
+		E: ID_CDROM_BD=1
+		E: ID_CDROM_BD_R=1
+		E: ID_CDROM_BD_RE=1
+		E: ID_CDROM_CD=1
+		E: ID_CDROM_CD_R=1
+		E: ID_CDROM_CD_RW=1
+		E: ID_CDROM_DVD=1
+		E: ID_CDROM_DVD_PLUS_R=1
+		E: ID_CDROM_DVD_PLUS_RW=1
+		E: ID_CDROM_DVD_PLUS_R_DL=1
+		E: ID_CDROM_DVD_R=1
+		E: ID_CDROM_DVD_RAM=1
+		E: ID_CDROM_DVD_RW=1
+		E: ID_CDROM_MEDIA=1
+		E: ID_CDROM_MEDIA_CD=1
+		E: ID_CDROM_MEDIA_SESSION_COUNT=1
+		E: ID_CDROM_MEDIA_TRACK_COUNT=10
+		E: ID_CDROM_MEDIA_TRACK_COUNT_AUDIO=10
+		E: ID_CDROM_MRW=1
+		E: ID_CDROM_MRW_W=1
+		E: ID_MODEL=HL-DT-ST_BD-RE_BH12LS38
+		E: ID_MODEL_ENC=HL-DT-ST\x20BD-RE\x20\x20BH12LS38\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20
+		E: ID_REVISION=1.00
+		E: ID_SERIAL=XXXXXXXXXXXXXXXXXXXX
+		E: ID_SERIAL_SHORT=XXXXXXXX
+		E: ID_TYPE=cd
+		E: MAJOR=11
+		E: MINOR=0
+		E: SUBSYSTEM=block
+		E: TAGS=:uaccess:seat:systemd:
+		E: USEC_INITIALIZED=2498180
 		"""
 
 		ret = []
@@ -30,7 +91,7 @@ class Disc:
 			lines = subprocess.check_output(['udevadm', 'info', '-q', 'all', path], universal_newlines=True).split('\n')
 
 			for line in lines:
-				parts = line.split(' ', 2)
+				parts = line.split(' ', 1)
 				if len(parts) != 2: continue
 
 				discid = None
@@ -211,9 +272,9 @@ class Disc:
 				pass
 
 		# Make sure all three are present
-		if label == None:		raise Exception("Could not find volume label")
-		if blocksize == None:	raise Exception("Could not find block size")
-		if blocks == None:		raise Exception("Could not find number of blocks")
+		if label is None:		raise Exception("Could not find volume label")
+		if blocksize is None:	raise Exception("Could not find block size")
+		if blocks is None:		raise Exception("Could not find number of blocks")
 
 		return (label,blocksize,blocks)
 
@@ -227,9 +288,6 @@ class DVD(_dvdread.DVD):
 	A title has chapters, audio tracks, and subpictures ("subtitles").
 	"""
 
-	titles = None
-	name = None
-
 	def __init__(self, Path, TitleClass=None):
 		"""
 		Initializes a DVD object and requires the path to the DVD device to query.
@@ -237,7 +295,7 @@ class DVD(_dvdread.DVD):
 		@TitleClass: python-level class to use when creating title objects.
 		"""
 
-		if TitleClass == None: TitleClass = Title
+		if TitleClass is None: TitleClass = Title
 
 		_dvdread.DVD.__init__(self, Path, TitleClass=TitleClass)
 		self.titles = {}
@@ -279,10 +337,11 @@ class DVD(_dvdread.DVD):
 		if not self.IsOpen:
 			raise AttributeError("GetName: disc is not open")
 
-		if self.name != None:
+		if self.name is not None:
 			return self.name
 
 		with open(self.Path, 'rb') as f:
+			# Random seek location I found in lsdvd...no idea what it means or where it is
 			f.seek(32808, os.SEEK_SET)
 			self.name = f.read(32).decode('utf-8').strip()
 
@@ -307,8 +366,6 @@ class Title(_dvdread.Title):
 	It should be invoked only by calling DVD.GetTitle() and never manually.
 	"""
 
-	audios = None
-
 	def __init__(self, DVD, IFONum, TitleNum, AudioClass=None, ChapterClass=None, SubpictureClass=None):
 		"""
 		Initializes a title object and should never be called manually.
@@ -320,9 +377,9 @@ class Title(_dvdread.Title):
 		@SubpictureClass: python-level class to use when creating subpicture objects.
 		"""
 
-		if AudioClass == None: AudioClass = Audio
-		if ChapterClass == None: ChapterClass = Chapter
-		if SubpictureClass == None: SubpictureClass = Subpicture
+		if AudioClass is None: AudioClass = Audio
+		if ChapterClass is None: ChapterClass = Chapter
+		if SubpictureClass is None: SubpictureClass = Subpicture
 
 		_dvdread.Title.__init__(self, DVD, IFONum, TitleNum, AudioClass=AudioClass, ChapterClass=ChapterClass, SubpictureClass=SubpictureClass)
 
