@@ -26,7 +26,7 @@ setup(
 	author = 'Colin ML Burnett',
 	author_email = 'cmlburnett@gmail.com',
 	url = "https://github.com/cmlburnett/PyDvdRead",
-	dwonload_url = "https://pypi.python.org/pypi/dvdread",
+	download_url = "https://pypi.python.org/pypi/dvdread",
 	packages = ['dvdread'],
 	ext_modules = [dvdread4],
 	requires = ['crudexml'],
