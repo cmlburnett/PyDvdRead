@@ -299,6 +299,7 @@ class DVD(_dvdread.DVD):
 
 		_dvdread.DVD.__init__(self, Path, TitleClass=TitleClass)
 		self.titles = {}
+		self.name = None
 
 	def __enter__(self):
 		return self
