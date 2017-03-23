@@ -16,7 +16,8 @@ dvdread4 = Extension(
 	],
         include_dirs = ['/usr/include'],
 	libraries = ['dvdread'],
-	sources = ['src/dvdread.c']
+	sources = ['src/dvdread.c'],
+	extra_compile_args = ['-std=c99']
 )
 
 setup(
