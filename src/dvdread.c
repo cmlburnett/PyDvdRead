@@ -1783,7 +1783,7 @@ Subpicture_init(Subpicture *self, PyObject *args, PyObject *kwds)
 			found++;
 			if (found == subpicturenum)
 			{
-				self->subpicture = title->ifo->vtsi_mat->vts_subp_attr;
+				self->subpicture = &(title->ifo->vtsi_mat->vts_subp_attr[i]);
 				break;
 			}
 		}
