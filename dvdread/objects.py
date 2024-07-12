@@ -98,7 +98,7 @@ class Disc:
 				typ = None
 				if parts[1] == 'ID_CDROM_MEDIA_CD=1':
 					ret.append( (path, 'cd', Disc.cd_discid(path)) )
-				elif parts[1] == 'ID_CDROM_MEDIA_DVD=1':
+				elif parts[1]  == 'ID_CDROM_MEDIA_DVD=1':
 					ret.append( (path, 'dvd', Disc.dvd_discid(path)) )
 				elif parts[1] in ('ID_CDROM_MEDIA_BD=1', 'ID_CDROM_MEDIA_BD_R=1'):
 					ret.append( (path, 'br', Disc.br_discid(path)) )

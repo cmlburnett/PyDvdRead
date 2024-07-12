@@ -534,7 +534,6 @@ DVD_Open(DVD *self)
 		}
 	}
 
-	// Get total number of titles on the device
 	self->numtitles = zero->tt_srpt->nr_of_srpts;
 
 	// return None for success
@@ -593,8 +592,11 @@ DVD_Close(DVD *self)
 	{
 		for (int i=0; i < self->numifos; i++)
 		{
-			ifoClose(self->ifos[i]);
-			self->ifos[i] = NULL;
+			if (self->ifos[i])
+			{
+				ifoClose(self->ifos[i]);
+				self->ifos[i] = NULL;
+			}
 		}
 		free(self->ifos);
 	}
@@ -757,6 +759,11 @@ Title_init(Title *self, PyObject *args, PyObject *kwds)
 	self->titlenum = titlenum;
 
 	// Get ifo_handle_t* for ifonum
+	if (!dvd->ifos[ifonum])
+	{
+		PyErr_Format(PyExc_ValueError, "Title %d to open IFO %d but IFO is not open", titlenum, ifonum);
+		return -1;
+	}
 	self->ifo = dvd->ifos[ifonum];
 
 	// Assign DVD object
